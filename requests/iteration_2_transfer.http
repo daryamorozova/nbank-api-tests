@@ -1,0 +1,166 @@
+## GET Auth Token for user 1 Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ= "ACC1" "ACC4"
+## GET Auth Token for user 2 Basic TWFyeTYwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ2NiQ= "ACC2" "ACC3"
+## GET Auth Token for admin Basic YWRtaW46YWRtaW4=
+
+### Positive case 1: User 1 can transfer an amount equal to 1 to User 2's account, the balance is not exceeded
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 2,
+  "amount": 1
+}
+
+### Positive case 2: User 1 can transfer an amount equal to 0.01 to User 2's account, the balance is not exceeded
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 2,
+  "amount": 0.01
+}
+
+### Positive case 3: User 1 can transfer an amount equal to 9999.99 to User 2's account, the balance is not exceeded
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 2,
+  "amount": 9999.99
+}
+
+### Positive case 4: User 1 can transfer an amount equal to 10000 to User 2's account, the balance is not exceeded
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 2,
+  "amount": 10000
+}
+
+### Positive case 5: User 1 can transfer an amount equal to 10000 from their Account №1 to their Account №2, the balance is not exceeded
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 4,
+  "amount": 10000
+}
+
+### Positive case 6: User 1 can transfer an amount equal to the balance to User 2
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 2,
+  "amount": 1000
+}
+
+### Positive case 7: User 1 checks the deposit amount in their account after several transfers, the amount is correct
+GET http://localhost:4111/api/v1/customer/accounts
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+### Positive case 8: User 2 checks the deposit amount in their account after several transfers, the amount is correct
+GET http://localhost:4111/api/v1/customer/accounts
+Content-Type: application/json
+Authorization: Basic TWFyeTYwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ2NiQ=
+
+### Negative case 1: User 1 cannot transfer an amount equal to 0 to User 2's account, the balance is not exceeded
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 2,
+  "amount": 0
+}
+
+### Negative case 2: User 1 cannot transfer an empty amount to User 2's account, the balance is not exceeded
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 2,
+  "amount":
+}
+
+### Negative case 3: User 1 cannot transfer an amount equal to null to User 2's account, the balance is not exceeded
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 2,
+  "amount": null
+}
+
+### Negative case 4: User 1 cannot transfer a negative amount equal to -500 to User 2's account, the balance is not exceeded
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 2,
+  "amount": -500
+}
+
+### Negative case 5: User 1 cannot transfer an amount equal to 10001 to User 2's account, the balance is not exceeded
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 2,
+  "amount": 10001
+}
+
+### Negative case 6: User 1 cannot transfer an amount equal to 1002 to User 2's account, the balance is exceeded
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 2,
+  "amount": 1002
+}
+
+### Negative case 7: User 1 cannot transfer an amount equal to 500, the balance is not exceeded, to a non-existent account
+POST http://localhost:4111/api/v1/accounts/transfer
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "senderAccountId": 1,
+  "receiverAccountId": 10,
+  "amount": 500
+}
+
+### User 1 checks the deposit amount in their account after several transfers, the amount is correct
+GET http://localhost:4111/api/v1/customer/accounts
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+### User 2 checks the deposit amount in their account after several transfers, the amount is correct
+GET http://localhost:4111/api/v1/customer/accounts
+Content-Type: application/json
+Authorization: Basic TWFyeTYwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ2NiQ=

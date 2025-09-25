@@ -1,0 +1,124 @@
+### Positive case 1: User can deposit an amount equal to 0.01 into their Account №1
+POST http://localhost:4111/api/v1/accounts/deposit
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "id": 1,
+  "balance": 0.01
+}
+
+### Positive case 2: User can deposit an amount equal to 1 into their Account №1
+POST http://localhost:4111/api/v1/accounts/deposit
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "id": 1,
+  "balance": 1
+}
+
+### Positive case 3: User can deposit an amount equal to 4999.99 into their Account №1
+POST http://localhost:4111/api/v1/accounts/deposit
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "id": 1,
+  "balance": 4999.99
+}
+
+### Positive case 4: User can deposit an amount equal to 5000 into their Account №1
+POST http://localhost:4111/api/v1/accounts/deposit
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "id": 1,
+  "balance": 5000
+}
+
+### Positive case 5: User can deposit an amount equal to 5000 into their Account №2
+POST http://localhost:4111/api/v1/accounts/deposit
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "id": 4,
+  "balance": 5000
+}
+
+### Positive case 6: User checks the deposit amount in Accounts №1 and №2 after several transfers, and the amount is correct
+GET http://localhost:4111/api/v1/customer/accounts
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+### Negative case 1: User cannot deposit an amount equal to 0 into their Account №1
+POST http://localhost:4111/api/v1/accounts/deposit
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "id": 1,
+  "balance": 0
+}
+
+### Negative case 2: User cannot deposit an empty amount into their Account №1
+POST http://localhost:4111/api/v1/accounts/deposit
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "id": 1,
+  "balance":
+}
+
+### Negative case 3: User cannot deposit a null amount into their Account №1
+POST http://localhost:4111/api/v1/accounts/deposit
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "id": 1,
+  "balance": null
+}
+
+### Negative case 4: User cannot deposit a negative amount of -500 into their Account №1
+POST http://localhost:4111/api/v1/accounts/deposit
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "id": 1,
+  "balance": -500
+}
+
+### Negative case 5: User cannot deposit an amount equal to 5001 into their Account №1
+POST http://localhost:4111/api/v1/accounts/deposit
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "id": 1,
+  "balance": 5001
+}
+
+### Negative case 6: User cannot deposit 500 into someone else's account
+POST http://localhost:4111/api/v1/accounts/deposit
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "id": 2,
+  "balance": 500
+}
+
+### Negative case 7: User cannot deposit 500 into a non-existent account
+POST http://localhost:4111/api/v1/accounts/deposit
+Content-Type: application/json
+Authorization: Basic a2F0ZTUwMDp2ZXJ5c1RSb25nUGFzc3dvcmQ1NSQ=
+
+{
+  "id": 10,
+  "balance": 0
+}
