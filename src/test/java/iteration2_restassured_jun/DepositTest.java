@@ -36,7 +36,7 @@ public class DepositTest {
             "3, 5000, true"
     })
     public void testPositiveDepositCases(int accountId, double depositAmount, boolean expectedSuccess) {
-        Map<String, Object> account = accountService.getAccountById(accountId);
+        Map<String, Object> account = accountService.getAccountById(accountId, GenerateUserTokens.authTokenUser1);
         double initialBalance = (Float) account.get("balance");
 
         Map<String, Object> depositData = new HashMap<>();
@@ -56,7 +56,7 @@ public class DepositTest {
                 .statusCode(expectedSuccess ? HttpStatus.SC_OK : HttpStatus.SC_BAD_REQUEST);
 
         if (expectedSuccess) {
-            Map<String, Object> updatedAccount = accountService.getAccountById(accountId);
+            Map<String, Object> updatedAccount = accountService.getAccountById(accountId, GenerateUserTokens.authTokenUser1);
             Float updatedBalanceFloat = (Float) updatedAccount.get("balance");
             double updatedBalance = updatedBalanceFloat.doubleValue();
             double expectedBalance = initialBalance + depositAmount;

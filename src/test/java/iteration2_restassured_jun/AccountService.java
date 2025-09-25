@@ -11,11 +11,11 @@ import java.util.Map;
 import static io.restassured.RestAssured.given;
 
 public class AccountService {
-    public Map<String, Object> getAccountById(int id) {
+    public Map<String, Object> getAccountById(int id, String authToken) {
         Response response = given()
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
-                .header("Authorization", GenerateUserTokens.authTokenUser1)
+                .header("Authorization", authToken) // Используем переданный токен
                 .get("http://localhost:4111/api/v1/customer/accounts")
                 .then()
                 .assertThat()
