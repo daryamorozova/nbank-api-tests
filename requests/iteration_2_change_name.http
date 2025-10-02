@@ -1,0 +1,116 @@
+### Positive case 1: User 1 edits their name and saves two words consisting of English letters, separated by a space (for example, «John Doe»).
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": "John Doe"
+}
+
+### Positive case 2: User 1 edits their name and saves two words consisting of Russian letters, separated by a space (for example, «Иван Иванов»).
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": "Иван Иванов"
+}
+
+### Negative case 1: User 1 edits their name and saves three words consisting of letters, separated by spaces (for example, «John Michael Doe»).
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": "John Michael Doe"
+}
+
+### Negative case 2: User 1 edits their name and saves one word (for example, «John»).
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": "John"
+}
+
+### Negative case 3: User 1 edits their name and saves an empty value.
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": ""
+}
+
+### Negative case 4: User 1 edits their name and saves null.
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": null
+}
+
+### Negative case 5: User 1 edits their name and saves two words consisting of letters, separated by several spaces (for example, «John  Doe»).
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": "John   Doe"
+}
+
+### Negative case 6: User 1 edits their name and saves two words consisting of letters and numbers, separated by a space (for example, «John1 Doe2»).
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": "John1 Doe2"
+}
+
+### Negative case 7: User 1 edits their name and saves two words consisting of letters and special characters, separated by a space (for example, «John! @Doe»).
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": "John! @Doe"
+}
+
+### Negative case 8: User 1 edits their name and saves two words, one of which starts with a number (for example, «1John Doe»).
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": "1John Doe"
+}
+
+### Negative case 9: User 1 edits their name and saves two words separated not by a space, but by another character (for example, «John-Doe»).
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": "John-Doe"
+}
+
+### Negative case 10: User 1 edits their name and saves two words consisting of letters from different languages (for example, «John Иванов»).
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": "John Иванов"
+}
+
+### Negative case 11: User 1 edits their name and saves two words consisting of English letters, separated by a space, with the total number of characters in the two words being 100
+PUT http://localhost:4111/api/v1/customer/profile
+Content-Type: application/json
+Authorization: Basic a2F0ZTE5OTg6dmVyeXNUUm9uZ1Bhc3N3b3JkMzMk
+
+{
+  "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+}
