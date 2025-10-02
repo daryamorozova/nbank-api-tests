@@ -11,7 +11,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class CreateAccountResponse {
+public class DepositResponse {
     private long id;
     private String accountNumber;
     private double balance;

@@ -11,9 +11,9 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class CreateAccountResponse {
-    private long id;
-    private String accountNumber;
-    private double balance;
-    private List<Transaction> transactions;
+public class TransferResponse {
+    private long senderAccountId;
+    private String message;
+    private double amount;
+    private long receiverAccountId;
 }
