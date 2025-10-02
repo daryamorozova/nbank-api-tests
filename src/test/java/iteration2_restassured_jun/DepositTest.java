@@ -2,6 +2,7 @@ package iteration2_restassured_jun;
 
 import com.google.gson.Gson;
 import io.restassured.http.ContentType;
+import io.restassured.path.json.JsonPath;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,6 +11,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
@@ -20,6 +22,29 @@ import static org.hamcrest.Matchers.is;
 public class DepositTest {
     static final double EPSILON = 0.001;
     static AccountService accountService;
+
+    private double getAccountBalanceById(int accountId) {
+        String response = given()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .header("Authorization", GenerateUserTokens.authTokenUser1)
+                .get("http://localhost:4111/api/v1/customer/accounts")
+                .then()
+                .assertThat()
+                .statusCode(HttpStatus.SC_OK)
+                .extract()
+                .asString();
+
+        JsonPath jsonPath = new JsonPath(response);
+        List<Map<String, Object>> accounts = jsonPath.getList("");
+        for (Map<String, Object> account : accounts) {
+            if (accountId == ((Number) account.get("id")).intValue()) {
+                return ((Number) account.get("balance")).doubleValue();
+            }
+        }
+
+        throw new IllegalStateException("Account with ID " + accountId + " not found.");
+    }
 
     @BeforeAll
     static void setUp() {
@@ -71,6 +96,8 @@ public class DepositTest {
             "1, 5001, false"
     })
     public void testNegativeDepositCases(int accountId, double depositAmount, boolean expectedSuccess) {
+        double initialBalance = getAccountBalanceById(accountId);
+
         given()
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
@@ -80,11 +107,16 @@ public class DepositTest {
                 .then()
                 .assertThat()
                 .statusCode(expectedSuccess ? HttpStatus.SC_OK : HttpStatus.SC_BAD_REQUEST);
+
+        double updatedBalance = getAccountBalanceById(accountId);
+        assertThat(Math.abs(updatedBalance - initialBalance) < EPSILON, is(true));
     }
 
     @ParameterizedTest
     @NullAndEmptySource
     public void testDepositWithInvalidValues(String depositAmount) {
+        double initialBalance = getAccountBalanceById(1);
+
         given()
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
@@ -94,6 +126,9 @@ public class DepositTest {
                 .then()
                 .assertThat()
                 .statusCode(depositAmount == null ? HttpStatus.SC_INTERNAL_SERVER_ERROR : HttpStatus.SC_BAD_REQUEST);
+
+        double updatedBalance = getAccountBalanceById(1);
+        assertThat(Math.abs(updatedBalance - initialBalance) < EPSILON, is(true));
     }
 
     @ParameterizedTest
@@ -102,6 +137,8 @@ public class DepositTest {
             "10, 500, false",
     })
     public void testDepositToNonExistentOrUnauthorizedAccount(int accountId, double depositAmount, boolean expectedSuccess) {
+        double initialBalance = getAccountBalanceById(accountId);
+
         given()
                 .contentType(ContentType.JSON)
                 .accept(ContentType.JSON)
@@ -111,5 +148,8 @@ public class DepositTest {
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.SC_BAD_REQUEST);
+
+        double updatedBalance = getAccountBalanceById(accountId);
+        assertThat(Math.abs(updatedBalance - initialBalance) < EPSILON, is(true));
     }
 }

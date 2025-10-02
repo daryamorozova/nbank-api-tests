@@ -1,10 +1,13 @@
 package iteration2_restassured_jun;
 
 import io.restassured.http.ContentType;
+import io.restassured.path.json.JsonPath;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
 /**
  * Добавлена аннотация @ExtendWith и указан класс RestAssuredSetup, чтобы использовать настройку RestAssured в тестовом классе
@@ -59,6 +62,20 @@ public class GenerateUserTest {
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.SC_CREATED);
+        String response = given()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .header("Authorization", "Basic YWRtaW46YWRtaW4=")
+                .get("http://localhost:4111/api/v1/admin/users")
+                .then()
+                .assertThat()
+                .statusCode(HttpStatus.SC_OK)
+                .extract()
+                .asString();
+
+        JsonPath jsonPath = new JsonPath(response);
+        boolean userExists = jsonPath.getList("username").contains("kate1999");
+        assertThat("User kate1999 should exist", userExists, is(true));
     }
 
 
@@ -80,5 +97,20 @@ public class GenerateUserTest {
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.SC_CREATED);
+
+        String response = given()
+                .contentType(ContentType.JSON)
+                .accept(ContentType.JSON)
+                .header("Authorization", "Basic YWRtaW46YWRtaW4=")
+                .get("http://localhost:4111/api/v1/admin/users")
+                .then()
+                .assertThat()
+                .statusCode(HttpStatus.SC_OK)
+                .extract()
+                .asString();
+
+        JsonPath jsonPath = new JsonPath(response);
+        boolean userExists = jsonPath.getList("username").contains("kate2000");
+        assertThat("User kate1999 should exist", userExists, is(true));
     }
 }
