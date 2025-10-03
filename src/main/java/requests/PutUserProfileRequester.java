@@ -3,6 +3,7 @@ package requests;
 import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
+import models.UpdateProfileRequest;
 
 import static io.restassured.RestAssured.given;
 
@@ -16,9 +17,10 @@ public class PutUserProfileRequester {
         this.responseSpecification = responseSpecification;
     }
 
-    public ValidatableResponse updateProfile() {
+    public ValidatableResponse updateProfile(UpdateProfileRequest model) {
         return given()
                 .spec(requestSpecification)
+                .body(model)
                 .put("/api/v1/customer/profile")
                 .then()
                 .assertThat()
