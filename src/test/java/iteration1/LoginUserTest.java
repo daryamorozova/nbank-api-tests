@@ -6,6 +6,8 @@ import models.LoginUserRequest;
 import models.UserRole;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
+import requests.AdminCreateUserRequester;
+import requests.LoginUserRequester;
 import specs.RequestSpecs;
 import specs.ResponseSpecs;
 

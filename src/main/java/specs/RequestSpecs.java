@@ -6,6 +6,7 @@ import io.restassured.filter.log.ResponseLoggingFilter;
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
 import models.LoginUserRequest;
+import requests.LoginUserRequester;
 import requests.skelethon.Endpoint;
 import requests.skelethon.requesters.ValidatedCrudRequester;
 
@@ -21,7 +22,7 @@ public class RequestSpecs {
                 .setAccept(ContentType.JSON)
                 .addFilters(List.of(new RequestLoggingFilter(),
                         new ResponseLoggingFilter()))
-                .setBaseUri("http://localhost:4111");
+                .setBaseUri("http://localhost:4111/api/v1/");
     }
 
     public static RequestSpecification unauthSpec() {
@@ -35,13 +36,12 @@ public class RequestSpecs {
     }
 
     public static RequestSpecification authAsUser(String username, String password) {
-        String userAuthHeader = new ValidatedCrudRequester(
+        String userAuthHeader = new LoginUserRequester(
                 RequestSpecs.unauthSpec(),
-                Endpoint.LOGIN,
                 specs.ResponseSpecs.requestReturnsOK())
-                .post(LoginUserRequest.builder().username(username).password(password).build());
-//                .extract()
-//                .header("Authorization");
+                .post(LoginUserRequest.builder().username(username).password(password).build())
+                .extract()
+                .header("Authorization");
 
         return defaultRequestSpecBuilder()
                 .addHeader("Authorization", userAuthHeader)
