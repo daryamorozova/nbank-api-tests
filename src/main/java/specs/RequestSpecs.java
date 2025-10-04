@@ -6,7 +6,8 @@ import io.restassured.filter.log.ResponseLoggingFilter;
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
 import models.LoginUserRequest;
-import requests.LoginUserRequester;
+import requests.skelethon.Endpoint;
+import requests.skelethon.requesters.ValidatedCrudRequester;
 
 import java.util.List;
 
@@ -34,12 +35,13 @@ public class RequestSpecs {
     }
 
     public static RequestSpecification authAsUser(String username, String password) {
-        String userAuthHeader = new LoginUserRequester(
+        String userAuthHeader = new ValidatedCrudRequester(
                 RequestSpecs.unauthSpec(),
+                Endpoint.LOGIN,
                 specs.ResponseSpecs.requestReturnsOK())
-                .post(LoginUserRequest.builder().username(username).password(password).build())
-                .extract()
-                .header("Authorization");
+                .post(LoginUserRequest.builder().username(username).password(password).build());
+//                .extract()
+//                .header("Authorization");
 
         return defaultRequestSpecBuilder()
                 .addHeader("Authorization", userAuthHeader)
