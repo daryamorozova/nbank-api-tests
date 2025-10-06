@@ -1,0 +1,133 @@
+package iteration2;
+
+import io.restassured.specification.RequestSpecification;
+import io.restassured.specification.ResponseSpecification;
+import iteration1.BaseTest;
+import models.CreateUserRequest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import requests.skelethon.requesters.AccountRequester;
+import requests.steps.AdminSteps;
+import specs.ResponseSpecs;
+
+public class DepositTest extends BaseTest {
+    static final double EPSILON = 0.001;
+
+
+
+
+    @ParameterizedTest
+    @CsvSource({
+            "1, 0.01, true",
+            "1, 1, true",
+            "1, 4999.99, true",
+            "1, 5000, true",
+            "2, 5000, true"
+    })
+    public void testPositiveDepositCases(int accountId, double depositAmount, boolean expectedSuccess) {
+        // Получаем начальный баланс аккаунта
+        double initialBalance = accountRequester.getAccountBalanceById(accountId);
+
+        // Создание запроса на депозит
+        DepositRequest depositRequest = new DepositRequest(accountId, depositAmount);
+
+        // Выполнение запроса и проверка результата
+        ValidatableResponse response = depositRequester.post(depositRequest);
+
+
+
+
+        // Валидация ответа
+        response.assertThat().statusCode(expectedSuccess ? HttpStatus.SC_OK : HttpStatus.SC_BAD_REQUEST);
+
+        if (expectedSuccess) {
+            // Получаем обновленный баланс аккаунта
+            double updatedBalance = accountRequester.getAccountBalanceById(accountId);
+
+            // Рассчитываем ожидаемый баланс
+            double expectedBalance = initialBalance + depositAmount;
+
+            // Проверяем, что обновленный баланс соответствует ожидаемому
+            assertThat(Math.abs(updatedBalance - expectedBalance) < EPSILON, is(true));
+        }
+    }
+
+    private void checkDepositAndBalance(int accountId, double depositAmount, String errorValue, int expectedStatusCode) {
+        double initialBalance = accountRequester.getAccountBalanceById(accountId);
+        DepositRequest depositRequest = DepositRequest.builder()
+                .id(accountId)
+                .balance(depositAmount)
+                .build();
+
+        ResponseSpecification responseSpec;
+        if (expectedStatusCode == HttpStatus.SC_BAD_REQUEST) {
+            responseSpec = ResponseSpecs.requestReturnsBadRequestWithoutKey(errorValue);
+        } else {
+            responseSpec = ResponseSpecs.requestReturnsUnauthorized(errorValue);
+        }
+
+        new DepositRequester(RequestSpecs.authAsUser("kate1999", "verysTRongPassword44$"), responseSpec)
+                .post(depositRequest);
+
+        double updatedBalance = accountRequester.getAccountBalanceById(accountId);
+        assertThat(updatedBalance, is(initialBalance));
+    }
+
+    public static Stream<Arguments> depositInvalidData() {
+        return Stream.of(
+                Arguments.of("1", "0.00", "Deposit amount must be at least 0.01"),
+                Arguments.of("1", "-500.00", "Deposit amount must be at least 0.01"),
+                Arguments.of("1", "5001.00", "Deposit amount cannot exceed 5000")
+        );
+    }
+
+    @MethodSource("depositInvalidData")
+    @ParameterizedTest
+    public void testNegativeDepositCases(int accountId, double depositAmount, String errorValue) {
+        checkDepositAndBalance(accountId, depositAmount, errorValue, HttpStatus.SC_BAD_REQUEST);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    public void testDepositWithInvalidValues(String depositAmount) {
+        double initialBalance = accountRequester.getAccountBalanceById(1);
+        Double parsedAmount = parseDepositAmount(depositAmount);
+
+        if (parsedAmount == null) {
+            throw new IllegalArgumentException("Deposit amount is invalid");
+        }
+
+        DepositRequest depositRequest = new DepositRequest(1, parsedAmount);
+        ValidatableResponse response = depositRequester.post(depositRequest);
+        response.assertThat().statusCode(HttpStatus.SC_BAD_REQUEST);
+
+        double updatedBalance = accountRequester.getAccountBalanceById(1);
+        assertThat(updatedBalance, is(initialBalance));
+    }
+
+    private Double parseDepositAmount(String depositAmount) {
+        if (depositAmount == null || depositAmount.isEmpty()) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(depositAmount);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+
+    public static Stream<Arguments> depositUnAuthData() {
+        return Stream.of(
+                Arguments.of("3", "500.00", "Unauthorized access to account"),
+                Arguments.of("10", "500.00", "Unauthorized access to account")
+        );
+    }
+
+    @MethodSource("depositInvalidData")
+    @ParameterizedTest
+    public void testDepositToNonExistentOrUnauthorizedAccount(int accountId, double depositAmount, String errorValue) {
+        checkDepositAndBalance(accountId, depositAmount, errorValue, HttpStatus.SC_BAD_REQUEST);
+    }
+}

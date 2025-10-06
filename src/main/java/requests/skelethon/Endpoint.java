@@ -25,6 +25,8 @@ public enum Endpoint {
             CreateAccountResponse.class
     );
 
+
+
     private final String endpoint;
     private Class<? extends BaseModel> requestModel;
     private Class<? extends BaseModel> responseModel;

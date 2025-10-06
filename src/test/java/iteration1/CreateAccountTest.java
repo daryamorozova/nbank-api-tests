@@ -1,23 +1,14 @@
 package iteration1;
 
-import generators.RandomData;
-import generators.RandomModelGenerator;
 import io.restassured.response.ValidatableResponse;
 import models.CreateAccountResponse;
 import models.CreateUserRequest;
-import models.UserRole;
 import org.junit.jupiter.api.Test;
-import requests.AdminCreateUserRequester;
-import requests.CreateAccountRequester;
-import requests.UserGetAccountsRequester;
 import requests.skelethon.Endpoint;
 import requests.skelethon.requesters.CrudRequester;
-import requests.skelethon.requesters.ValidatedCrudRequester;
 import requests.steps.AdminSteps;
 import specs.RequestSpecs;
 import specs.ResponseSpecs;
-
-import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;

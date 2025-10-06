@@ -10,8 +10,7 @@ import specs.ResponseSpecs;
 
 public class AdminSteps {
     public static CreateUserRequest createUser() {
-        CreateUserRequest userRequest =
-                RandomModelGenerator.generate(CreateUserRequest.class);
+        CreateUserRequest userRequest = RandomModelGenerator.generate(CreateUserRequest.class);
 
         new ValidatedCrudRequester<CreateUserResponse>(
                 RequestSpecs.adminSpec(),
