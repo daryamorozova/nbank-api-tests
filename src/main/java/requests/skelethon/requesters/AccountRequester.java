@@ -3,25 +3,24 @@ package requests.skelethon.requesters;
 import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
+import requests.skelethon.Endpoint;
+import requests.skelethon.HttpRequest;
 
 import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 
-public class AccountRequester {
-    private RequestSpecification requestSpecification;
-    private ResponseSpecification responseSpecification;
+public class AccountRequester extends HttpRequest {
 
-    public AccountRequester(RequestSpecification requestSpecification, ResponseSpecification responseSpecification) {
-        this.requestSpecification = requestSpecification;
-        this.responseSpecification = responseSpecification;
+    public AccountRequester(RequestSpecification requestSpecification, Endpoint endpoint, ResponseSpecification responseSpecification) {
+        super(requestSpecification, endpoint, responseSpecification);
     }
 
-    public double getAccountBalanceById(int accountId) {
+    public double getAccountBalanceById(long accountId) {
         ValidatableResponse response = given()
                 .spec(requestSpecification)
-                .get("/api/v1/customer/accounts")
+                .get("customer/accounts")
                 .then()
                 .assertThat()
                 .spec(responseSpecification);
