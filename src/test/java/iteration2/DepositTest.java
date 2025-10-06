@@ -157,7 +157,6 @@ public class DepositTest extends BaseTest {
         checkDepositAndBalance(accountId, depositAmount, errorValue, HttpStatus.SC_BAD_REQUEST);
     }
 
-
     @ParameterizedTest
     @NullAndEmptySource
     public void testDepositWithInvalidValues(String depositAmount) {

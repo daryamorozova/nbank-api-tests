@@ -38,7 +38,7 @@ public class CrudRequester extends HttpRequest implements CrudEndpointInterface 
     }
 
     @Override
-    public ValidatableResponse put(long id, BaseModel model) {
+    public ValidatableResponse put(BaseModel model) {
         var body = model == null ? "" : model;
 
         return given()
