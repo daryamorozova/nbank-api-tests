@@ -13,6 +13,7 @@ import requests.LoginUserRequester;
 import requests.skelethon.Endpoint;
 import requests.skelethon.requesters.CrudRequester;
 import requests.skelethon.requesters.ValidatedCrudRequester;
+import requests.steps.AdminSteps;
 import specs.RequestSpecs;
 import specs.ResponseSpecs;
 
@@ -34,7 +35,7 @@ public class LoginUserTest extends BaseTest {
 
     @Test
     public void userCanGenerateAuthTokenTest() {
-        CreateUserRequest userRequest = RandomModelGenerator.generate(CreateUserRequest.class);
+        CreateUserRequest userRequest = AdminSteps.createUser();
 
         // создание пользователя
         new ValidatedCrudRequester<CreateUserResponse>(

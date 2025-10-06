@@ -13,6 +13,7 @@ import requests.UserGetAccountsRequester;
 import requests.skelethon.Endpoint;
 import requests.skelethon.requesters.CrudRequester;
 import requests.skelethon.requesters.ValidatedCrudRequester;
+import requests.steps.AdminSteps;
 import specs.RequestSpecs;
 import specs.ResponseSpecs;
 
@@ -26,13 +27,7 @@ public class CreateAccountTest extends BaseTest {
     @Test
     public void userCanCreateAccountTest() {
         // Создаем пользователя
-        CreateUserRequest userRequest = RandomModelGenerator.generate(CreateUserRequest.class);
-
-        new CrudRequester(
-                RequestSpecs.adminSpec(),
-                Endpoint.ADMIN_USER,
-                ResponseSpecs.entityWasCreated())
-                .post(userRequest);
+        CreateUserRequest userRequest = AdminSteps.createUser();
 
         // Создаем аккаунт и извлекаем ответ
         ValidatableResponse response = new CrudRequester(
