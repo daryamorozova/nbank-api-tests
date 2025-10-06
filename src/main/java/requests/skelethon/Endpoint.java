@@ -16,7 +16,7 @@ public enum Endpoint {
     LOGIN(
             "/auth/login",
             LoginUserRequest.class,
-            LoginUserResponce.class
+            LoginUserResponse.class
     ),
 
     ACCOUNTS(
@@ -24,11 +24,6 @@ public enum Endpoint {
             BaseModel.class,
             CreateAccountResponse.class
     );
-
-
-
-
-
 
     private final String endpoint;
     private Class<? extends BaseModel> requestModel;

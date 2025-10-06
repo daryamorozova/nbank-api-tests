@@ -9,6 +9,7 @@ import requests.skelethon.interfaces.CrudEndpointInterface;
 
 public class ValidatedCrudRequester<T extends BaseModel> extends HttpRequest implements CrudEndpointInterface {
     private CrudRequester crudRequester;
+
     public ValidatedCrudRequester(RequestSpecification requestSpecification, Endpoint endpoint, ResponseSpecification responseSpecification) {
         super(requestSpecification, endpoint, responseSpecification);
         this.crudRequester = new CrudRequester(requestSpecification, endpoint, responseSpecification);

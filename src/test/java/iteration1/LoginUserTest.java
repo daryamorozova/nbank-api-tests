@@ -2,12 +2,16 @@ package iteration1;
 
 import generators.RandomData;
 import models.CreateUserRequest;
+import models.CreateUserResponse;
 import models.LoginUserRequest;
 import models.UserRole;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import requests.AdminCreateUserRequester;
 import requests.LoginUserRequester;
+import requests.skelethon.Endpoint;
+import requests.skelethon.requesters.CrudRequester;
+import requests.skelethon.requesters.ValidatedCrudRequester;
 import specs.RequestSpecs;
 import specs.ResponseSpecs;
 
@@ -20,8 +24,9 @@ public class LoginUserTest extends BaseTest {
                 .password("admin")
                 .build();
 
-        new LoginUserRequester(
+        new ValidatedCrudRequester<CreateUserResponse>(
                 RequestSpecs.unauthSpec(),
+                Endpoint.LOGIN,
                 ResponseSpecs.requestReturnsOK())
                 .post(userRequest);
     }
@@ -36,13 +41,15 @@ public class LoginUserTest extends BaseTest {
                 .build();
 
         // создание пользователя
-        new AdminCreateUserRequester(
+        new ValidatedCrudRequester<CreateUserResponse>(
                 RequestSpecs.adminSpec(),
-                specs.ResponseSpecs.entityWasCreated())
+                Endpoint.ADMIN_USER,
+                ResponseSpecs.entityWasCreated())
                 .post(userRequest);
 
-        new LoginUserRequester(RequestSpecs.unauthSpec(),
-                specs.ResponseSpecs.requestReturnsOK())
+        new CrudRequester(RequestSpecs.unauthSpec(),
+                Endpoint.LOGIN,
+                ResponseSpecs.requestReturnsOK())
                 .post(LoginUserRequest.builder().username(userRequest.getUsername()).password(userRequest.getPassword()).build())
                 .header("Authorization", Matchers.notNullValue());
     }
