@@ -93,7 +93,7 @@ public class DepositTest extends BaseTest {
     })
     public void testPositiveDepositCases(double depositAmount, boolean expectedSuccess) {
         // Используем ID первого аккаунта
-        long accountId = userAccounts.getFirst().getId();
+        long accountId = userAccounts.get(0).getId();
 
         // Получаем начальный баланс аккаунта
         double initialBalance = accountRequester.getAccountBalanceById(accountId);
@@ -104,18 +104,16 @@ public class DepositTest extends BaseTest {
                 .post(DepositRequest.builder().id(accountId).balance(depositAmount).build());
 
         // Валидация ответа
-        response.assertThat().statusCode(expectedSuccess ? HttpStatus.SC_OK : HttpStatus.SC_BAD_REQUEST);
+        response.assertThat().statusCode(HttpStatus.SC_OK);
 
-        if (expectedSuccess) {
-            // Получаем обновленный баланс аккаунта
-            double updatedBalance = accountRequester.getAccountBalanceById(accountId);
+        // Получаем обновленный баланс аккаунта
+        double updatedBalance = accountRequester.getAccountBalanceById(accountId);
 
-            // Рассчитываем ожидаемый баланс
-            double expectedBalance = initialBalance + depositAmount;
+        // Рассчитываем ожидаемый баланс
+        double expectedBalance = initialBalance + depositAmount;
 
-            // Проверяем, что обновленный баланс соответствует ожидаемому
-            assertThat(Math.abs(updatedBalance - expectedBalance) < EPSILON, is(true));
-        }
+        // Проверяем, что обновленный баланс соответствует ожидаемому
+        assertThat(Math.abs(updatedBalance - expectedBalance) < EPSILON, is(true));
     }
 
     private void checkDepositAndBalance(long accountId, double depositAmount, String errorValue, int expectedStatusCode) {
@@ -144,16 +142,16 @@ public class DepositTest extends BaseTest {
 
     public static Stream<Arguments> depositInvalidData() {
         return Stream.of(
-                Arguments.of("0.00", "Deposit amount must be at least 0.01"),
-                Arguments.of("-500.00", "Deposit amount must be at least 0.01"),
-                Arguments.of("5001.00", "Deposit amount cannot exceed 5000")
+                Arguments.of(0.00, "Deposit amount must be at least 0.01"),
+                Arguments.of(-500.00, "Deposit amount must be at least 0.01"),
+                Arguments.of(5001.00, "Deposit amount cannot exceed 5000")
         );
     }
 
     @MethodSource("depositInvalidData")
     @ParameterizedTest
     public void testNegativeDepositCases(double depositAmount, String errorValue) {
-        long accountId = userAccounts.getFirst().getId();
+        long accountId = userAccounts.get(0).getId();
         checkDepositAndBalance(accountId, depositAmount, errorValue, HttpStatus.SC_BAD_REQUEST);
     }
 
@@ -161,19 +159,14 @@ public class DepositTest extends BaseTest {
     @NullAndEmptySource
     public void testDepositWithInvalidValues(String depositAmount) {
 
-        long accountId = userAccounts.getFirst().getId();
+        long accountId = userAccounts.get(0).getId();
         // Получаем начальный баланс аккаунта
         double initialBalance = accountRequester.getAccountBalanceById(accountId);
-        Double parsedAmount = parseDepositAmount(depositAmount);
-
-        if (parsedAmount == null) {
-            throw new IllegalArgumentException("Deposit amount is invalid");
-        }
 
         ValidatableResponse response = new CrudRequester(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
                 Endpoint.DEPOSIT,
-                ResponseSpecs.requestReturnsOK())
-                .post(DepositRequest.builder().id(accountId).balance(parsedAmount).build());
+                ResponseSpecs.requestReturnsBadRequestWithoutKeyWithOutValue())
+                .post(DepositRequest.builder().id(accountId).balance(null).build());
 
         response.assertThat().statusCode(HttpStatus.SC_BAD_REQUEST);
 
@@ -181,21 +174,10 @@ public class DepositTest extends BaseTest {
         assertThat(updatedBalance, is(initialBalance));
     }
 
-    private Double parseDepositAmount(String depositAmount) {
-        if (depositAmount == null || depositAmount.isEmpty()) {
-            return null;
-        }
-        try {
-            return Double.parseDouble(depositAmount);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
 
     public static Stream<Arguments> depositUnAuthData() {
         return Stream.of(
-                Arguments.of("500.00", "Unauthorized access to account"));
+                Arguments.of(500.00, "Unauthorized access to account"));
     }
 
     @MethodSource("depositUnAuthData")
@@ -205,6 +187,12 @@ public class DepositTest extends BaseTest {
         List<CreateAccountResponse> userAccounts = getUserAccounts(
                 RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword())
         );
+
+// Получаем ID существующего аккаунта
+        long ownId = userAccounts.get(0).getId();
+
+        // Получаем начальный баланс существующего аккаунта
+        double initialBalance = accountRequester.getAccountBalanceById(ownId);
 
         // Находим ID, который точно не принадлежит пользователю
         // Например, берём ID, который больше максимального ID в списке
@@ -216,7 +204,10 @@ public class DepositTest extends BaseTest {
         // Используем ID, который точно не принадлежит пользователю
         long nonExistentAccountId = maxAccountId + 1;
 
-        // Проверяем депозит на несуществующий аккаунт
         checkDepositAndBalance(nonExistentAccountId, depositAmount, errorValue, HttpStatus.SC_BAD_REQUEST);
+
+        // Проверяем, что баланс существующего аккаунта не изменился
+        double updatedBalance = accountRequester.getAccountBalanceById(ownId);
+        assertThat(updatedBalance, is(initialBalance));
     }
 }

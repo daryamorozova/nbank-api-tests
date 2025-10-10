@@ -20,7 +20,7 @@ public class AccountRequester extends HttpRequest {
     public double getAccountBalanceById(long accountId) {
         ValidatableResponse response = given()
                 .spec(requestSpecification)
-                .get("customer/accounts")
+                .get(Endpoint.GET_ACCOUNTS.getEndpoint())
                 .then()
                 .assertThat()
                 .spec(responseSpecification);
@@ -28,7 +28,7 @@ public class AccountRequester extends HttpRequest {
         // Извлечение баланса из ответа
         List<Map<String, Object>> accounts = response.extract().jsonPath().getList("");
         for (Map<String, Object> account : accounts) {
-            if (accountId == ((Number) account.get("id")).intValue()) {
+            if (accountId == ((Number) account.get("id")).longValue()) {
                 return ((Number) account.get("balance")).doubleValue();
             }
         }

@@ -3,6 +3,7 @@ package iteration2;
 import models.CreateUserRequest;
 import models.GetProfileResponse;
 import models.UpdateProfileRequest;
+import models.UpdateProfileResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -13,15 +14,16 @@ import requests.steps.AdminSteps;
 import specs.RequestSpecs;
 import specs.ResponseSpecs;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 
 public class ChangeNameTest {
     private CrudRequester crudRequester;
     private ValidatedCrudRequester validatedCrudRequester;
     private CreateUserRequest userRequest;
 
-    public String getCurrentUserName(String username, String password) {
-        GetProfileResponse response = crudRequester
-                .get();
+    public String getCurrentUserName(long userId) {
+        GetProfileResponse response = new ValidatedCrudRequester<GetProfileResponse>(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()), Endpoint.GET_PROFILE, ResponseSpecs.requestReturnsOK()).get(0);
         return response.getUsername();
     }
 
@@ -37,12 +39,14 @@ public class ChangeNameTest {
 
         UpdateProfileRequest updateProfileRequest = UpdateProfileRequest.builder().name(newName).build();
 
-        new ValidatedCrudRequester(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
+        UpdateProfileResponse response = new ValidatedCrudRequester<UpdateProfileResponse>(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
                 Endpoint.UPDATE_PROFILE,
                 ResponseSpecs.requestReturnsOK())
                 .put(updateProfileRequest);
 
-
+        // Проверяем, что имя в профиле обновилось
+        assertEquals(newName, response.getCustomer().getName(), "Имя пользователя не обновилось корректно");
+        assertEquals("Profile updated successfully", response.getMessage(), "Сообщение об обновлении профиля не совпадает");
     }
 
 

@@ -11,7 +11,11 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UpdateProfileResponse extends BaseModel {
-    private Customer customer;
-    private String message; // Profile updated successfully
+public class Customer {
+    private long id;
+    private String username;
+    private String password;
+    private String name;
+    private String role;
+    private List<CreateAccountResponse> accounts;
 }

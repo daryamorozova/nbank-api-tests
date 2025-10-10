@@ -44,7 +44,7 @@ public class CrudRequester extends HttpRequest implements CrudEndpointInterface 
         return given()
                 .spec(requestSpecification)
                 .body(model)
-                .post(endpoint.getEndpoint())
+                .put(endpoint.getEndpoint())
                 .then()
                 .assertThat()
                 .spec(responseSpecification);
