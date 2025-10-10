@@ -16,6 +16,7 @@ import requests.AccountRequester;
 import requests.DepositRequester;
 import specs.RequestSpecs;
 import specs.ResponseSpecs;
+import utils.ParseDepositAmount;
 
 import java.util.stream.Stream;
 
@@ -56,18 +57,17 @@ public class DepositTest extends BaseTest {
         ValidatableResponse response = depositRequester.post(depositRequest);
 
         // Валидация ответа
-        response.assertThat().statusCode(expectedSuccess ? HttpStatus.SC_OK : HttpStatus.SC_BAD_REQUEST);
+        response.assertThat().statusCode(HttpStatus.SC_OK);
 
-        if (expectedSuccess) {
-            // Получаем обновленный баланс аккаунта
-            double updatedBalance = accountRequester.getAccountBalanceById(accountId);
+        // Получаем обновленный баланс аккаунта
+        double updatedBalance = accountRequester.getAccountBalanceById(accountId);
 
-            // Рассчитываем ожидаемый баланс
-            double expectedBalance = initialBalance + depositAmount;
+        // Рассчитываем ожидаемый баланс
+        double expectedBalance = initialBalance + depositAmount;
 
-            // Проверяем, что обновленный баланс соответствует ожидаемому
-            assertThat(Math.abs(updatedBalance - expectedBalance) < EPSILON, is(true));
-        }
+        // Проверяем, что обновленный баланс соответствует ожидаемому
+        assertThat(Math.abs(updatedBalance - expectedBalance) < EPSILON, is(true));
+
     }
 
     private void checkDepositAndBalance(int accountId, double depositAmount, String errorValue, int expectedStatusCode) {
@@ -109,11 +109,7 @@ public class DepositTest extends BaseTest {
     @NullAndEmptySource
     public void testDepositWithInvalidValues(String depositAmount) {
         double initialBalance = accountRequester.getAccountBalanceById(1);
-        Double parsedAmount = parseDepositAmount(depositAmount);
-
-        if (parsedAmount == null) {
-            throw new IllegalArgumentException("Deposit amount is invalid");
-        }
+        Double parsedAmount = new ParseDepositAmount().parseDepositAmount(depositAmount);
 
         DepositRequest depositRequest = new DepositRequest(1, parsedAmount);
         ValidatableResponse response = depositRequester.post(depositRequest);
@@ -122,18 +118,6 @@ public class DepositTest extends BaseTest {
         double updatedBalance = accountRequester.getAccountBalanceById(1);
         assertThat(updatedBalance, is(initialBalance));
     }
-
-    private Double parseDepositAmount(String depositAmount) {
-        if (depositAmount == null || depositAmount.isEmpty()) {
-            return null;
-        }
-        try {
-            return Double.parseDouble(depositAmount);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
 
     public static Stream<Arguments> depositUnAuthData() {
         return Stream.of(
