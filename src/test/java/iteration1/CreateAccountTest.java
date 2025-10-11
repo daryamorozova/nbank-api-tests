@@ -1,72 +1,46 @@
 package iteration1;
 
-import io.restassured.RestAssured;
-import io.restassured.filter.log.RequestLoggingFilter;
-import io.restassured.filter.log.ResponseLoggingFilter;
-import io.restassured.http.ContentType;
-import org.apache.http.HttpStatus;
-import org.junit.jupiter.api.BeforeAll;
+import io.restassured.response.ValidatableResponse;
+import models.CreateAccountResponse;
+import models.CreateUserRequest;
 import org.junit.jupiter.api.Test;
+import requests.skelethon.Endpoint;
+import requests.skelethon.requesters.CrudRequester;
+import requests.steps.AdminSteps;
+import specs.RequestSpecs;
+import specs.ResponseSpecs;
 
-import java.util.List;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
-import static io.restassured.RestAssured.given;
-
-public class CreateAccountTest {
-    @BeforeAll
-    public static void setupRestAssured() {
-        RestAssured.filters(
-                List.of(new RequestLoggingFilter(),
-                        new ResponseLoggingFilter()));
-    }
+public class CreateAccountTest extends BaseTest {
 
     @Test
     public void userCanCreateAccountTest() {
-        // создание пользователя
-        given()
-                .contentType(ContentType.JSON)
-                .accept(ContentType.JSON)
-                .header("Authorization", "Basic YWRtaW46YWRtaW4=")
-                .body("""
-                        {
-                          "username": "kate2000111",
-                          "password": "Kate2000#",
-                          "role": "USER"
-                        }
-                        """)
-                .post("http://localhost:4111/api/v1/admin/users")
-                .then()
-                .assertThat()
-                .statusCode(HttpStatus.SC_CREATED);
+        // Создаем пользователя
+        CreateUserRequest userRequest = AdminSteps.createUser();
 
-        // получаем токен юзера
-        String userAuthHeader = given()
-                .contentType(ContentType.JSON)
-                .accept(ContentType.JSON)
-                .body("""
-                        {
-                          "username": "kate2000111",
-                          "password": "Kate2000#"
-                        }
-                        """)
-                .post("http://localhost:4111/api/v1/auth/login")
-                .then()
-                .assertThat()
-                .statusCode(HttpStatus.SC_OK)
-                .extract()
-                .header("Authorization");
+        // Создаем аккаунт и извлекаем ответ
+        ValidatableResponse response = new CrudRequester(
+                RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
+                Endpoint.ACCOUNTS,
+                ResponseSpecs.entityWasCreated())
+                .post(null);
 
-        // создаем аккаунт(счет)
-        given()
-                .header("Authorization", userAuthHeader)
-                .contentType(ContentType.JSON)
-                .accept(ContentType.JSON)
-                .post("http://localhost:4111/api/v1/accounts")
-                .then()
-                .assertThat()
-                .statusCode(HttpStatus.SC_CREATED);
+        CreateAccountResponse createAccountResponse = response.extract().as(CreateAccountResponse.class);
+        String createdAccountNumber = createAccountResponse.getAccountNumber();
 
-        // запросить все аккаунты пользователя и проверить, что наш аккаунт там
-
+        // Получаем список аккаунтов пользователя
+        CrudRequester userGetAccountsRequester = new CrudRequester(
+                RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
+                Endpoint.ACCOUNTS,
+                ResponseSpecs.requestReturnsOK());
+//        List<CreateAccountResponse> userAccounts = ;
+//
+//        // Проверяем, что созданный аккаунт присутствует в списке
+//        boolean accountExists = userAccounts.stream()
+//                .anyMatch(account -> account.getAccountNumber().equals(createdAccountNumber));
+//
+//        assertThat("Созданный аккаунт не найден в списке аккаунтов пользователя", accountExists, is(true));
     }
 }
