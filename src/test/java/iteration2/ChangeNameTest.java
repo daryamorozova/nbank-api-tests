@@ -24,7 +24,7 @@ public class ChangeNameTest {
 
     public String getCurrentUserName(long userId) {
         GetProfileResponse response = new ValidatedCrudRequester<GetProfileResponse>(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()), Endpoint.GET_PROFILE, ResponseSpecs.requestReturnsOK()).get(0);
-        return response.getUsername();
+        return response.getName();
     }
 
     @BeforeEach
