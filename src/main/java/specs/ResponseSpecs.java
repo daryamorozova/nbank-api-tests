@@ -1,6 +1,7 @@
 package specs;
 
 import io.restassured.builder.ResponseSpecBuilder;
+import io.restassured.http.ContentType;
 import io.restassured.specification.ResponseSpecification;
 import org.apache.http.HttpStatus;
 
@@ -8,7 +9,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 
 public class ResponseSpecs {
-    private ResponseSpecs() {}
+    private ResponseSpecs() {
+    }
 
     private static ResponseSpecBuilder defaultResponseBuilder() {
         return new ResponseSpecBuilder();

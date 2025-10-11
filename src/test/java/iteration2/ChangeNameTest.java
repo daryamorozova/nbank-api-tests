@@ -1,7 +1,7 @@
 package iteration2;
 
+import io.restassured.specification.ResponseSpecification;
 import models.CreateUserRequest;
-import models.GetProfileResponse;
 import models.UpdateProfileRequest;
 import models.UpdateProfileResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,11 +21,6 @@ public class ChangeNameTest {
     private CrudRequester crudRequester;
     private ValidatedCrudRequester validatedCrudRequester;
     private CreateUserRequest userRequest;
-
-    public String getCurrentUserName(long userId) {
-        GetProfileResponse response = new ValidatedCrudRequester<GetProfileResponse>(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()), Endpoint.GET_PROFILE, ResponseSpecs.requestReturnsOK()).get(0);
-        return response.getUsername();
-    }
 
     @BeforeEach
     void setUp() {
@@ -49,5 +44,25 @@ public class ChangeNameTest {
         assertEquals("Profile updated successfully", response.getMessage(), "Сообщение об обновлении профиля не совпадает");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "John Michael Doe"
+//            , "John", "", "John  Doe",
+//            "John1 Doe2", "John! @Doe", "1John Doe", "John-Doe",
+//            "John Иванов",
+//            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " +
+//                    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    })
+    public void testNegativeChangeName(String invalidName) {
+        UpdateProfileRequest updateProfileRequest = UpdateProfileRequest.builder().name(invalidName).build();
 
+        // Используем спецификацию ответа для ошибки Bad Request с текстовым сообщением
+        ResponseSpecification badRequestSpec = ResponseSpecs.requestReturnsBadRequestWithoutKey("Name must contain two words with letters only");
+
+        UpdateProfileResponse response = new ValidatedCrudRequester<UpdateProfileResponse>(
+                RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
+                Endpoint.UPDATE_PROFILE,
+                badRequestSpec)
+                .put(updateProfileRequest);
+    }
 }
