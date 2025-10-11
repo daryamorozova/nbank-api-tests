@@ -1,6 +1,7 @@
 package iteration2;
 
 import io.restassured.specification.ResponseSpecification;
+import iteration1.BaseTest;
 import models.CreateUserRequest;
 import models.UpdateProfileRequest;
 import models.UpdateProfileResponse;
@@ -17,7 +18,7 @@ import specs.ResponseSpecs;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
-public class ChangeNameTest {
+public class ChangeNameTest extends BaseTest {
     private CrudRequester crudRequester;
     private ValidatedCrudRequester validatedCrudRequester;
     private CreateUserRequest userRequest;
