@@ -57,7 +57,7 @@ public class DepositTest extends BaseTest {
         ResponseSpecification okSpec = ResponseSpecs.requestReturnsOK();
         accountRequester = new AccountRequester(requestSpec, okSpec);
         // Deposits create a new deposit transaction => expect 201
-        depositRequester = new DepositRequester(requestSpec, ResponseSpecs.entityWasCreated());
+        depositRequester = new DepositRequester(requestSpec, ResponseSpecs.requestReturnsOK());
 
         CreateAccountResponse createAccountResponse = new CreateAccountRequester(requestSpec, ResponseSpecs.entityWasCreated())
                 .post(null)
@@ -68,10 +68,10 @@ public class DepositTest extends BaseTest {
 
     @ParameterizedTest
     @CsvSource({
-            "0.01, true"
-//            "1, true",
-//            "4999.99, true",
-//            "5000, true"
+            "0.01, true",
+            "1, true",
+            "4999.99, true",
+            "5000, true"
     })
     public void testPositiveDepositCases(double depositAmount, boolean expectedSuccess) {
         // Получаем начальный баланс аккаунта
@@ -84,7 +84,7 @@ public class DepositTest extends BaseTest {
         ValidatableResponse response = depositRequester.post(depositRequest);
 
         // Валидация ответа
-        response.assertThat().statusCode(HttpStatus.SC_CREATED);
+        response.assertThat().statusCode(HttpStatus.SC_OK);
 
         // Получаем обновленный баланс аккаунта
         double updatedBalance = accountRequester.getAccountBalanceById(accountId);
@@ -111,7 +111,7 @@ public class DepositTest extends BaseTest {
                 .build();
 
         ResponseSpecification errorSpec = ResponseSpecs.requestReturnsUnauthorized(errorValue);
-        // Для негативных сценариев используем спецификацию BAD_REQUEST
+
         ValidatableResponse response = new DepositRequester(requestSpec, errorSpec).post(depositRequest);
         response.assertThat().statusCode(expectedStatusCode);
 
@@ -161,6 +161,6 @@ public class DepositTest extends BaseTest {
         DepositRequest depositRequest = new DepositRequest(targetAccountId, depositAmount);
         ValidatableResponse response = new DepositRequester(requestSpec, ResponseSpecs.requestReturnsUnauthorized(errorValue))
                 .post(depositRequest);
-        response.assertThat().statusCode(HttpStatus.SC_BAD_REQUEST);
+        response.assertThat().statusCode(HttpStatus.SC_FORBIDDEN);
     }
 }

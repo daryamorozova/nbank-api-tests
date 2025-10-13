@@ -1,12 +1,10 @@
 package iteration2;
 
 import generators.RandomData;
-import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
 import iteration1.BaseTest;
 import models.*;
-import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -16,10 +14,8 @@ import specs.ResponseSpecs;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TransferTest extends BaseTest {
-
     static final double EPSILON = 0.001;
 
     private AccountRequester accountRequester1;
@@ -31,7 +27,6 @@ public class TransferTest extends BaseTest {
 
     private long senderAccountId;
     private long receiverAccountId;
-
 
     @BeforeEach
     void setUp() {
@@ -73,59 +68,11 @@ public class TransferTest extends BaseTest {
         senderAccountId = senderAccount.getId();
         receiverAccountId = receiverAccount.getId();
 
-        // Pre-fund sender with 5000 for positive cases
-        new DepositRequester(requestSpec1, ResponseSpecs.entityWasCreated())
+        // Pre-fund sender with 10000 for positive cases
+        new DepositRequester(requestSpec1, okSpec)
                 .post(new DepositRequest(senderAccountId, 5000.00));
-
-    }
-
-    private void checkTransferAndBalance(long senderAccountId, long receiverAccountId, Double amount, String expectedErrorValue) {
-        if (amount == null) {
-            throw new IllegalArgumentException("Transfer amount must not be null");
-        }
-
-        // Получаем начальные балансы отправителя и получателя
-        double senderInitialBalance = accountRequester1.getAccountBalanceById(senderAccountId);
-        double receiverInitialBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
-
-        // Проверяем, что сумма перевода не превышает баланс отправителя
-        if (amount > senderInitialBalance) {
-            throw new IllegalArgumentException("Сумма перевода превышает баланс отправителя. Текущий баланс: " + senderInitialBalance);
-        }
-
-        // Осуществляем перевод
-        TransferRequest transferRequest = TransferRequest.builder()
-                .senderAccountId(senderAccountId)
-                .receiverAccountId(receiverAccountId)
-                .amount(amount)
-                .build();
-
-        ValidatableResponse response = transferRequester1.post(transferRequest);
-
-        // Получаем статус код и проверяем его
-        int statusCode = response.extract().statusCode();
-
-        if (statusCode == HttpStatus.SC_OK) {
-            // Ожидаем успешный ответ
-            response.assertThat().spec(ResponseSpecs.requestReturnsOK());
-
-            // Получаем обновлённые балансы после перевода
-            double senderUpdatedBalance = accountRequester1.getAccountBalanceById(senderAccountId);
-            double receiverUpdatedBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
-
-            // Проверяем корректность балансов после перевода
-            assertThat(Math.abs(senderUpdatedBalance - (senderInitialBalance - amount)) < EPSILON, is(true));
-            assertThat(Math.abs(receiverUpdatedBalance - (receiverInitialBalance + amount)) < EPSILON, is(true));
-        } else if (statusCode == HttpStatus.SC_BAD_REQUEST) {
-            // Ожидаем ошибку
-            if (expectedErrorValue != null) {
-                response.assertThat().spec(ResponseSpecs.requestReturnsBadRequestWithoutKey(expectedErrorValue));
-            } else {
-                response.assertThat().spec(ResponseSpecs.requestReturnsBadRequestWithoutKeyWithOutValue());
-            }
-        } else {
-            throw new AssertionError("Unexpected status code: " + statusCode);
-        }
+        new DepositRequester(requestSpec1, okSpec)
+                .post(new DepositRequest(senderAccountId, 5000.00));
     }
 
     @ParameterizedTest
@@ -137,7 +84,23 @@ public class TransferTest extends BaseTest {
             "1000"
     })
     public void testPositiveTransferCases(Double amount) {
-        checkTransferAndBalance(senderAccountId, receiverAccountId, amount, null);
+        double senderInitialBalance = accountRequester1.getAccountBalanceById(senderAccountId);
+        double receiverInitialBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
+
+        TransferRequest transferRequest = TransferRequest.builder()
+                .senderAccountId(senderAccountId)
+                .receiverAccountId(receiverAccountId)
+                .amount(amount)
+                .build();
+
+        // Expect 200 OK on successful transfer
+        transferRequester1.post(transferRequest);
+
+        double senderUpdatedBalance = accountRequester1.getAccountBalanceById(senderAccountId);
+        double receiverUpdatedBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
+
+        assertThat(Math.abs(senderUpdatedBalance - (senderInitialBalance - amount)) < EPSILON, is(true));
+        assertThat(Math.abs(receiverUpdatedBalance - (receiverInitialBalance + amount)) < EPSILON, is(true));
     }
 
     @ParameterizedTest
@@ -147,7 +110,24 @@ public class TransferTest extends BaseTest {
             "10001.00, Transfer amount cannot exceed 10000"
     })
     public void testNegativeTransferCases(Double amount, String expectedErrorValue) {
-        checkTransferAndBalance(senderAccountId, receiverAccountId, amount, expectedErrorValue);
+        double senderInitialBalance = accountRequester1.getAccountBalanceById(senderAccountId);
+        double receiverInitialBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
+
+        TransferRequest transferRequest = TransferRequest.builder()
+                .senderAccountId(senderAccountId)
+                .receiverAccountId(receiverAccountId)
+                .amount(amount)
+                .build();
+
+        // Expect 400 with specific error message
+        new TransferRequester(requestSpec1, ResponseSpecs.requestReturnsBadRequestWithoutKey(expectedErrorValue))
+                .post(transferRequest);
+
+        double senderUpdatedBalance = accountRequester1.getAccountBalanceById(senderAccountId);
+        double receiverUpdatedBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
+
+        assertThat(Math.abs(senderUpdatedBalance - senderInitialBalance) < EPSILON, is(true));
+        assertThat(Math.abs(receiverUpdatedBalance - receiverInitialBalance) < EPSILON, is(true));
     }
 
     @CsvSource({
@@ -155,13 +135,50 @@ public class TransferTest extends BaseTest {
     })
     @ParameterizedTest
     public void testTransferWithNullAmount(String ignored, String expectedMessage) {
-        IllegalArgumentException thrown = assertThrows(
-                IllegalArgumentException.class,
-                () -> checkTransferAndBalance(senderAccountId, receiverAccountId, null, null),
-                "Expected checkTransferAndBalance() to throw, but it didn't"
-        );
+        double senderInitialBalance = accountRequester1.getAccountBalanceById(senderAccountId);
+        double receiverInitialBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
+        Double amount = null;
 
-        // Проверяем, что возникает ожидаемое исключение
-        assertThat(thrown.getMessage(), is(expectedMessage));
+        TransferRequest transferRequest = TransferRequest.builder()
+                .senderAccountId(senderAccountId)
+                .receiverAccountId(receiverAccountId)
+                .amount(amount)
+                .build();
+
+        // Expect 400 with specific error message
+        new TransferRequester(requestSpec1, ResponseSpecs.requestReturnsBadRequestWithoutKey(expectedMessage))
+                .post(transferRequest);
+
+        double senderUpdatedBalance = accountRequester1.getAccountBalanceById(senderAccountId);
+        double receiverUpdatedBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
+
+        assertThat(Math.abs(senderUpdatedBalance - senderInitialBalance) < EPSILON, is(true));
+        assertThat(Math.abs(receiverUpdatedBalance - receiverInitialBalance) < EPSILON, is(true));
+    }
+
+
+    @ParameterizedTest
+    @CsvSource({
+            "999999999, Invalid transfer: insufficient funds or invalid accounts"
+    })
+    public void testTransferToNonExistentAccount(Long nonExistentAccountId, String expectedErrorValue) {
+        double senderInitialBalance = accountRequester1.getAccountBalanceById(senderAccountId);
+        double receiverInitialBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
+
+        TransferRequest transferRequest = TransferRequest.builder()
+                .senderAccountId(senderAccountId)
+                .receiverAccountId(nonExistentAccountId)
+                .amount(100.00)
+                .build();
+
+        // Expect 400 or 404 with specific error message
+        new TransferRequester(requestSpec1, ResponseSpecs.requestReturnsBadRequestWithoutKey(expectedErrorValue))
+                .post(transferRequest);
+
+        double senderUpdatedBalance = accountRequester1.getAccountBalanceById(senderAccountId);
+        double receiverUpdatedBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
+
+        assertThat(Math.abs(senderUpdatedBalance - senderInitialBalance) < EPSILON, is(true));
+        assertThat(Math.abs(receiverUpdatedBalance - receiverInitialBalance) < EPSILON, is(true));
     }
 }
