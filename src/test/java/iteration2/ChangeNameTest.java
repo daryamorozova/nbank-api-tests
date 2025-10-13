@@ -1,11 +1,16 @@
 package iteration2;
 
+import generators.RandomData;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
+import models.CreateUserRequest;
+import models.CreateUserResponse;
 import models.UpdateProfileRequest;
+import models.UserRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import requests.AdminCreateUserRequester;
 import requests.GetUserProfileRequester;
 import requests.PutUserProfileRequester;
 import specs.RequestSpecs;
@@ -19,11 +24,26 @@ public class ChangeNameTest {
     private ResponseSpecification responseSpecOK;
     private ResponseSpecification responseSpecBadRequest;
     private GetUserProfileRequester getUserProfileRequester;
+    private String username;
+    private String password;
 
     @BeforeEach
     void setUp() {
-        // Устанавливаем спецификации запроса и ответа
-        requestSpec = RequestSpecs.authAsUser("kate1999", "verysTRongPassword44$");
+        CreateUserRequest createUserRequest = CreateUserRequest.builder()
+                .username(RandomData.getUsername())
+                .password(RandomData.getPassword())
+                .role(UserRole.USER.toString())
+                .build();
+
+        CreateUserResponse createUserResponse = new AdminCreateUserRequester(RequestSpecs.adminSpec(),
+                ResponseSpecs.entityWasCreated())
+                .post(createUserRequest)
+                .extract()
+                .as(CreateUserResponse.class);
+
+        username = createUserRequest.getUsername();
+        password = createUserRequest.getPassword();
+        requestSpec = RequestSpecs.authAsUser(username, password);
         responseSpecOK = ResponseSpecs.requestReturnsOK();
         responseSpecBadRequest = ResponseSpecs.requestReturnsBadRequestWithoutKeyWithOutValue();
 

@@ -18,7 +18,7 @@ public class AccountRequester {
         this.responseSpecification = responseSpecification;
     }
 
-    public double getAccountBalanceById(int accountId) {
+    public double getAccountBalanceById(long accountId) {
         ValidatableResponse response = given()
                 .spec(requestSpecification)
                 .get("/api/v1/customer/accounts")
