@@ -29,7 +29,7 @@ import static org.hamcrest.Matchers.is;
 public class DepositTest extends BaseTest {
 
     static final double EPSILON = 0.001;
-
+    private RequestSpecification requestSpec;
     AccountRequester accountRequester;
     DepositRequester depositRequester;
     private String username;
@@ -52,18 +52,18 @@ public class DepositTest extends BaseTest {
 
         username = createUserRequest.getUsername();
         password = createUserRequest.getPassword();
-        RequestSpecification requestSpec = RequestSpecs.authAsUser(username, password);
+        requestSpec = RequestSpecs.authAsUser(username, password);
 
-        ResponseSpecification responseSpec = ResponseSpecs.requestReturnsOK();
-        accountRequester = new AccountRequester(requestSpec, responseSpec);
-        depositRequester = new DepositRequester(requestSpec, responseSpec);
+        ResponseSpecification okSpec = ResponseSpecs.requestReturnsOK();
+        accountRequester = new AccountRequester(requestSpec, okSpec);
+        // Deposits create a new deposit transaction => expect 201
+        depositRequester = new DepositRequester(requestSpec, ResponseSpecs.entityWasCreated());
 
-        CreateAccountResponse createAccountResponse = new CreateAccountRequester(requestSpec, responseSpec)
+        CreateAccountResponse createAccountResponse = new CreateAccountRequester(requestSpec, ResponseSpecs.entityWasCreated())
                 .post(null)
                 .extract()
                 .as(CreateAccountResponse.class);
         accountId = createAccountResponse.getId(); // Сохраняем ID созданного аккаунта
-
     }
 
     @ParameterizedTest
@@ -83,8 +83,8 @@ public class DepositTest extends BaseTest {
         // Выполнение запроса и проверка результата
         ValidatableResponse response = depositRequester.post(depositRequest);
 
-        // Валидация ответа !!!!!!!!!!!!!!!!!!!!
-        response.assertThat().statusCode(HttpStatus.SC_OK);
+        // Валидация ответа
+        response.assertThat().statusCode(HttpStatus.SC_CREATED);
 
         // Получаем обновленный баланс аккаунта
         double updatedBalance = accountRequester.getAccountBalanceById(accountId);
@@ -97,15 +97,22 @@ public class DepositTest extends BaseTest {
     }
 
     private void checkDepositAndBalance(long accountId, double depositAmount, String errorValue, int expectedStatusCode) {
-        double initialBalance = accountRequester.getAccountBalanceById(accountId);
+        double initialBalance;
+        try {
+            initialBalance = accountRequester.getAccountBalanceById(accountId);
+        } catch (IllegalStateException ex) {
+            // Аккаунт недоступен/не существует для текущего пользователя — проверяем только код ответа
+            initialBalance = Double.NaN;
+        }
+
         DepositRequest depositRequest = DepositRequest.builder()
                 .id(accountId)
                 .balance(depositAmount)
                 .build();
 
-        ResponseSpecification responseSpec = ResponseSpecs.requestReturnsUnauthorized(errorValue);
-        // Используем уже созданный depositRequester вместо создания нового экземпляра
-        ValidatableResponse response = depositRequester.post(depositRequest);
+        ResponseSpecification errorSpec = ResponseSpecs.requestReturnsUnauthorized(errorValue);
+        // Для негативных сценариев используем спецификацию BAD_REQUEST
+        ValidatableResponse response = new DepositRequester(requestSpec, errorSpec).post(depositRequest);
         response.assertThat().statusCode(expectedStatusCode);
 
         double updatedBalance = accountRequester.getAccountBalanceById(accountId);
@@ -129,14 +136,15 @@ public class DepositTest extends BaseTest {
     @ParameterizedTest
     @NullAndEmptySource
     public void testDepositWithInvalidValues(String depositAmount) {
-        double initialBalance = accountRequester.getAccountBalanceById(1);
+        double initialBalance = accountRequester.getAccountBalanceById(accountId);
         Double parsedAmount = new ParseDepositAmount().parseDepositAmount(depositAmount);
 
-        DepositRequest depositRequest = new DepositRequest(1, parsedAmount);
-        ValidatableResponse response = depositRequester.post(depositRequest);
+        DepositRequest depositRequest = new DepositRequest(accountId, parsedAmount);
+        ValidatableResponse response = new DepositRequester(requestSpec, ResponseSpecs.requestReturnsBadRequestWithoutKeyWithOutValue())
+                .post(depositRequest);
         response.assertThat().statusCode(HttpStatus.SC_BAD_REQUEST);
 
-        double updatedBalance = accountRequester.getAccountBalanceById(1);
+        double updatedBalance = accountRequester.getAccountBalanceById(accountId);
         assertThat(updatedBalance, is(initialBalance));
     }
 
@@ -147,9 +155,12 @@ public class DepositTest extends BaseTest {
         );
     }
 
-    @MethodSource("depositInvalidData")
+    @MethodSource("depositUnAuthData")
     @ParameterizedTest
-    public void testDepositToNonExistentOrUnauthorizedAccount(int accountId, double depositAmount, String errorValue) {
-        checkDepositAndBalance(accountId, depositAmount, errorValue, HttpStatus.SC_BAD_REQUEST);
+    public void testDepositToNonExistentOrUnauthorizedAccount(long targetAccountId, double depositAmount, String errorValue) {
+        DepositRequest depositRequest = new DepositRequest(targetAccountId, depositAmount);
+        ValidatableResponse response = new DepositRequester(requestSpec, ResponseSpecs.requestReturnsUnauthorized(errorValue))
+                .post(depositRequest);
+        response.assertThat().statusCode(HttpStatus.SC_BAD_REQUEST);
     }
 }

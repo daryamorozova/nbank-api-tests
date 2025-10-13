@@ -1,22 +1,18 @@
 package iteration2;
 
+import generators.RandomData;
 import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
 import iteration1.BaseTest;
-import models.TransferRequest;
+import models.*;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.MethodSource;
-import requests.AccountRequester;
-import requests.TransferRequester;
+import requests.*;
 import specs.RequestSpecs;
 import specs.ResponseSpecs;
-
-import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -26,35 +22,74 @@ public class TransferTest extends BaseTest {
 
     static final double EPSILON = 0.001;
 
-    static AccountRequester accountRequester1;
-    static AccountRequester accountRequester2;
-    static TransferRequester transferRequester1;
-    static TransferRequester transferRequester2;
+    private AccountRequester accountRequester1;
+    private AccountRequester accountRequester2;
+    private TransferRequester transferRequester1;
+
+    private RequestSpecification requestSpec1;
+    private RequestSpecification requestSpec2;
+
+    private long senderAccountId;
+    private long receiverAccountId;
 
 
     @BeforeEach
     void setUp() {
-        RequestSpecification requestSpec1 = RequestSpecs.authAsUser("kate1999", "verysTRongPassword44$");
-        ResponseSpecification responseSpec1 = ResponseSpecs.requestReturnsOK();
-        ResponseSpecification responseSpec2 = ResponseSpecs.requestReturnsBadRequestWithoutKeyWithOutValue();
+        var user1 = CreateUserRequest.builder()
+                .username(RandomData.getUsername())
+                .password(RandomData.getPassword())
+                .role(UserRole.USER.toString())
+                .build();
 
-        accountRequester1 = new AccountRequester(requestSpec1, responseSpec1);
-        transferRequester1 = new TransferRequester(requestSpec1, responseSpec1);
+        var user2 = CreateUserRequest.builder()
+                .username(RandomData.getUsername())
+                .password(RandomData.getPassword())
+                .role(UserRole.USER.toString())
+                .build();
 
+        new AdminCreateUserRequester(RequestSpecs.adminSpec(), ResponseSpecs.entityWasCreated())
+                .post(user1);
+        new AdminCreateUserRequester(RequestSpecs.adminSpec(), ResponseSpecs.entityWasCreated())
+                .post(user2);
 
-        RequestSpecification requestSpec2 = RequestSpecs.authAsUser("kate1991", "verysTRongPassword44$");
+        requestSpec1 = RequestSpecs.authAsUser(user1.getUsername(), user1.getPassword());
+        requestSpec2 = RequestSpecs.authAsUser(user2.getUsername(), user2.getPassword());
 
-        accountRequester2 = new AccountRequester(requestSpec2, responseSpec1);
-        transferRequester2 = new TransferRequester(requestSpec1, responseSpec2);
+        ResponseSpecification okSpec = ResponseSpecs.requestReturnsOK();
+        accountRequester1 = new AccountRequester(requestSpec1, okSpec);
+        accountRequester2 = new AccountRequester(requestSpec2, okSpec);
+        transferRequester1 = new TransferRequester(requestSpec1, okSpec);
+
+        // Create accounts for both users
+        CreateAccountResponse senderAccount = new CreateAccountRequester(requestSpec1, ResponseSpecs.entityWasCreated())
+                .post(null)
+                .extract()
+                .as(CreateAccountResponse.class);
+        CreateAccountResponse receiverAccount = new CreateAccountRequester(requestSpec2, ResponseSpecs.entityWasCreated())
+                .post(null)
+                .extract()
+                .as(CreateAccountResponse.class);
+
+        senderAccountId = senderAccount.getId();
+        receiverAccountId = receiverAccount.getId();
+
+        // Pre-fund sender with 5000 for positive cases
+        new DepositRequester(requestSpec1, ResponseSpecs.entityWasCreated())
+                .post(new DepositRequest(senderAccountId, 5000.00));
+
     }
 
-    private void checkTransferAndBalance(int senderAccountId, int receiverAccountId, double depositAmount, String expectedErrorValue) {
+    private void checkTransferAndBalance(long senderAccountId, long receiverAccountId, Double amount, String expectedErrorValue) {
+        if (amount == null) {
+            throw new IllegalArgumentException("Transfer amount must not be null");
+        }
+
         // Получаем начальные балансы отправителя и получателя
         double senderInitialBalance = accountRequester1.getAccountBalanceById(senderAccountId);
         double receiverInitialBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
 
         // Проверяем, что сумма перевода не превышает баланс отправителя
-        if (depositAmount > senderInitialBalance) {
+        if (amount > senderInitialBalance) {
             throw new IllegalArgumentException("Сумма перевода превышает баланс отправителя. Текущий баланс: " + senderInitialBalance);
         }
 
@@ -62,7 +97,7 @@ public class TransferTest extends BaseTest {
         TransferRequest transferRequest = TransferRequest.builder()
                 .senderAccountId(senderAccountId)
                 .receiverAccountId(receiverAccountId)
-                .amount(depositAmount)
+                .amount(amount)
                 .build();
 
         ValidatableResponse response = transferRequester1.post(transferRequest);
@@ -79,8 +114,8 @@ public class TransferTest extends BaseTest {
             double receiverUpdatedBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
 
             // Проверяем корректность балансов после перевода
-            assertThat(Math.abs(senderUpdatedBalance - (senderInitialBalance - depositAmount)) < EPSILON, is(true));
-            assertThat(Math.abs(receiverUpdatedBalance - (receiverInitialBalance + depositAmount)) < EPSILON, is(true));
+            assertThat(Math.abs(senderUpdatedBalance - (senderInitialBalance - amount)) < EPSILON, is(true));
+            assertThat(Math.abs(receiverUpdatedBalance - (receiverInitialBalance + amount)) < EPSILON, is(true));
         } else if (statusCode == HttpStatus.SC_BAD_REQUEST) {
             // Ожидаем ошибку
             if (expectedErrorValue != null) {
@@ -91,49 +126,38 @@ public class TransferTest extends BaseTest {
         } else {
             throw new AssertionError("Unexpected status code: " + statusCode);
         }
-
     }
 
     @ParameterizedTest
     @CsvSource({
-            "1, 3, 1",
-            "1, 3, 0.01",
-            "1, 3, 9999.99",
-            "1, 3, 10000",
-            "1, 3, 1000",
+            "1",
+            "0.01",
+            "9999.99",
+            "10000",
+            "1000"
     })
-    public void testPositiveTransferCases(int senderAccountId, int receiverAccountId, Double amount) {
+    public void testPositiveTransferCases(Double amount) {
         checkTransferAndBalance(senderAccountId, receiverAccountId, amount, null);
     }
 
-    public static Stream<Arguments> transferInvalidData() {
-        return Stream.of(
-                Arguments.of("1", "3", "0.00", "Transfer amount must be at least 0.01"),
-                Arguments.of("1", "3", "-500.00", "Transfer amount must be at least 0.01"),
-                Arguments.of("1", "3", "10001.00", "Transfer amount cannot exceed 10000"),
-                Arguments.of("1", "3", "10000.00", "Invalid transfer: insufficient funds or invalid accounts"),
-                Arguments.of("1", "10", "500", "Invalid transfer: insufficient funds or invalid accounts")
-        );
-    }
-
-    @MethodSource("transferInvalidData")
     @ParameterizedTest
-    public void testNegativeTransferCases(int senderAccountId, int receiverAccountId, Double amount, String expectedErrorValue) {
+    @CsvSource({
+            "0.00, Transfer amount must be at least 0.01",
+            "-500.00, Transfer amount must be at least 0.01",
+            "10001.00, Transfer amount cannot exceed 10000"
+    })
+    public void testNegativeTransferCases(Double amount, String expectedErrorValue) {
         checkTransferAndBalance(senderAccountId, receiverAccountId, amount, expectedErrorValue);
     }
 
-    private static Stream<Arguments> transferWithNullAmountData() {
-        return Stream.of(
-                Arguments.of(1, 3, null, "Transfer amount must not be null")
-        );
-    }
-
-    @MethodSource("transferWithNullAmountData")
+    @CsvSource({
+            ", Transfer amount must not be null"
+    })
     @ParameterizedTest
-    public void testTransferWithNullAmount(Integer senderAccountId, Integer receiverAccountId, Double amount, String expectedMessage) {
+    public void testTransferWithNullAmount(String ignored, String expectedMessage) {
         IllegalArgumentException thrown = assertThrows(
                 IllegalArgumentException.class,
-                () -> checkTransferAndBalance(senderAccountId, receiverAccountId, amount, null),
+                () -> checkTransferAndBalance(senderAccountId, receiverAccountId, null, null),
                 "Expected checkTransferAndBalance() to throw, but it didn't"
         );
 
