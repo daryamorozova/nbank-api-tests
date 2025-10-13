@@ -50,7 +50,7 @@ public class ResponseSpecs {
 
     public static ResponseSpecification requestReturnsUnauthorized(String errorValue) {
         return defaultResponseBuilder()
-                .expectStatusCode(HttpStatus.SC_BAD_REQUEST)
+                .expectStatusCode(HttpStatus.SC_FORBIDDEN)
                 .expectBody(equalTo(errorValue))
                 .build();
     }

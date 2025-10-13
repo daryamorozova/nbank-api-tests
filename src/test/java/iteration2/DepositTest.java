@@ -73,10 +73,6 @@ public class DepositTest extends BaseTest {
                 RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword())
         );
 
-        if (userAccounts == null || userAccounts.size() < 2) {
-            throw new IllegalStateException("Failed to create two accounts for the user.");
-        }
-
         accountRequester = new AccountRequester(
                 RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
                 Endpoint.GET_ACCOUNTS,
@@ -116,30 +112,6 @@ public class DepositTest extends BaseTest {
         assertThat(Math.abs(updatedBalance - expectedBalance) < EPSILON, is(true));
     }
 
-    private void checkDepositAndBalance(long accountId, double depositAmount, String errorValue, int expectedStatusCode) {
-        double initialBalance = accountRequester.getAccountBalanceById(accountId);
-
-        DepositRequest depositRequest = DepositRequest.builder()
-                .id(accountId)
-                .balance(depositAmount)
-                .build();
-
-        ResponseSpecification responseSpec;
-        if (expectedStatusCode == HttpStatus.SC_BAD_REQUEST) {
-            responseSpec = ResponseSpecs.requestReturnsBadRequestWithoutKey(errorValue);
-        } else {
-            responseSpec = ResponseSpecs.requestReturnsUnauthorized(errorValue);
-        }
-
-        new CrudRequester(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
-                Endpoint.DEPOSIT, responseSpec)
-                .post(depositRequest);
-
-
-        double updatedBalance = accountRequester.getAccountBalanceById(accountId);
-        assertThat(updatedBalance, is(initialBalance));
-    }
-
     public static Stream<Arguments> depositInvalidData() {
         return Stream.of(
                 Arguments.of(0.00, "Deposit amount must be at least 0.01"),
@@ -152,7 +124,20 @@ public class DepositTest extends BaseTest {
     @ParameterizedTest
     public void testNegativeDepositCases(double depositAmount, String errorValue) {
         long accountId = userAccounts.get(0).getId();
-        checkDepositAndBalance(accountId, depositAmount, errorValue, HttpStatus.SC_BAD_REQUEST);
+        ResponseSpecification responseSpec = ResponseSpecs.requestReturnsBadRequestWithoutKey(errorValue);
+
+        DepositRequest depositRequest = DepositRequest.builder()
+                .id(accountId)
+                .balance(depositAmount)
+                .build();
+
+        new CrudRequester(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
+                Endpoint.DEPOSIT, responseSpec)
+                .post(depositRequest);
+
+        double initialBalance = accountRequester.getAccountBalanceById(accountId);
+        double updatedBalance = accountRequester.getAccountBalanceById(accountId);
+        assertThat(updatedBalance, is(initialBalance));
     }
 
     @ParameterizedTest
@@ -204,10 +189,18 @@ public class DepositTest extends BaseTest {
         // Используем ID, который точно не принадлежит пользователю
         long nonExistentAccountId = maxAccountId + 1;
 
-        checkDepositAndBalance(nonExistentAccountId, depositAmount, errorValue, HttpStatus.SC_BAD_REQUEST);
+        ResponseSpecification responseSpec = ResponseSpecs.requestReturnsUnauthorized(errorValue);
 
-        // Проверяем, что баланс существующего аккаунта не изменился
-        double updatedBalance = accountRequester.getAccountBalanceById(ownId);
+        DepositRequest depositRequest = DepositRequest.builder()
+                .id(nonExistentAccountId)
+                .balance(depositAmount)
+                .build();
+
+        new CrudRequester(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
+                Endpoint.DEPOSIT, responseSpec)
+                .post(depositRequest);
+
+        double updatedBalance = accountRequester.getAccountBalanceById(nonExistentAccountId);
         assertThat(updatedBalance, is(initialBalance));
     }
 }

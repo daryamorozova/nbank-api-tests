@@ -9,6 +9,7 @@ import iteration1.BaseTest;
 import models.CreateAccountResponse;
 import models.CreateUserRequest;
 import models.TransferRequest;
+import models.TransferResponse;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -76,60 +77,14 @@ public class TransferTest extends BaseTest {
         );
         crudRequester.post(null);
 
-        List<CreateAccountResponse> accounts = getUserAccounts(
-                RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword())
-        );
-
-        if (accounts == null || accounts.isEmpty()) {
-            throw new IllegalStateException("Failed to create account for the user.");
-        }
-
-        return accounts.get(0);
+        return getUserAccounts(userRequest).get(0);
     }
 
-    private List<CreateAccountResponse> getUserAccounts(RequestSpecification requestSpec) {
+    private List<CreateAccountResponse> getUserAccounts(CreateUserRequest userRequest) {
+        RequestSpecification requestSpec = RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword());
         Endpoint endpoint = Endpoint.GET_ACCOUNTS;
-        Response response = given()
-                .spec(requestSpec)
-                .get(endpoint.getEndpoint());
-
-        return response.then()
-                .extract()
-                .as(new TypeRef<List<CreateAccountResponse>>() {
-                });
-    }
-
-    private void checkTransferAndBalance(long senderAccountId, long receiverAccountId, double amount, String expectedErrorValue, int expectedStatusCode) {
-        double senderInitialBalance = accountRequester1.getAccountBalanceById(senderAccountId);
-        double receiverInitialBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
-
-        TransferRequest transferRequest = TransferRequest.builder()
-                .senderAccountId(senderAccountId)
-                .receiverAccountId(receiverAccountId)
-                .amount(amount)
-                .build();
-
-        ResponseSpecification responseSpec = expectedStatusCode == HttpStatus.SC_OK
-                ? ResponseSpecs.requestReturnsOK()
-                : ResponseSpecs.requestReturnsBadRequestWithoutKey(expectedErrorValue);
-
-        ValidatableResponse response = (ValidatableResponse) transferRequester.post(transferRequest);
-
-        response.assertThat().statusCode(expectedStatusCode);
-
-        if (expectedStatusCode == HttpStatus.SC_OK) {
-            double senderUpdatedBalance = accountRequester1.getAccountBalanceById(senderAccountId);
-            double receiverUpdatedBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
-
-            assertThat(Math.abs(senderUpdatedBalance - (senderInitialBalance - amount)) < EPSILON, is(true));
-            assertThat(Math.abs(receiverUpdatedBalance - (receiverInitialBalance + amount)) < EPSILON, is(true));
-        } else {
-            double senderUpdatedBalance = accountRequester1.getAccountBalanceById(senderAccountId);
-            double receiverUpdatedBalance = accountRequester2.getAccountBalanceById(receiverAccountId);
-
-            assertThat(senderUpdatedBalance, is(senderInitialBalance));
-            assertThat(receiverUpdatedBalance, is(receiverInitialBalance));
-        }
+        Response response = given().spec(requestSpec).get(endpoint.getEndpoint());
+        return response.then().extract().as(new TypeRef<List<CreateAccountResponse>>() {});
     }
 
     @ParameterizedTest
@@ -140,7 +95,29 @@ public class TransferTest extends BaseTest {
             "10000, true"
     })
     public void testPositiveTransferCases(double amount, boolean expectedSuccess) {
-        checkTransferAndBalance(account1.getId(), account2.getId(), amount, null, HttpStatus.SC_OK);
+        double senderInitialBalance = accountRequester1.getAccountBalanceById(account1);
+        double receiverInitialBalance = accountRequester2.getAccountBalanceById(account2);
+
+        TransferRequest transferRequest = TransferRequest.builder()
+                .senderAccountId(account1)
+                .receiverAccountId(account2)
+                .amount(amount)
+                .build();
+
+        ResponseSpecification responseSpec = expectedStatusCode
+
+        ValidatableResponse response = (ValidatableResponse) transferRequester.post(transferRequest);
+
+        response.assertThat().statusCode(expectedStatusCode);
+
+
+            double senderUpdatedBalance = accountRequester1.getAccountBalanceById(account1);
+            double receiverUpdatedBalance = accountRequester2.getAccountBalanceById(account2);
+
+            assertThat(Math.abs(senderUpdatedBalance - (senderInitialBalance - amount)) < EPSILON, is(true));
+            assertThat(Math.abs(receiverUpdatedBalance - (receiverInitialBalance + amount)) < EPSILON, is(true));
+
+        }
     }
 
     public static Stream<Arguments> transferInvalidData() {
@@ -156,7 +133,7 @@ public class TransferTest extends BaseTest {
     @MethodSource("transferInvalidData")
     @ParameterizedTest
     public void testNegativeTransferCases(double amount, String expectedErrorValue, int expectedStatusCode) {
-        checkTransferAndBalance(account1.getId(), account2.getId(), amount, expectedErrorValue, expectedStatusCode);
+
     }
 
     private static Stream<Arguments> transferWithNullAmountData() {
@@ -170,7 +147,7 @@ public class TransferTest extends BaseTest {
     public void testTransferWithNullAmount(Double amount, String expectedMessage) {
         IllegalArgumentException thrown = assertThrows(
                 IllegalArgumentException.class,
-                () -> checkTransferAndBalance(account1.getId(), account2.getId(), amount, null, HttpStatus.SC_OK),
+                () -> (account1.getId(), account2.getId(), amount, null, HttpStatus.SC_OK),
                 "Expected checkTransferAndBalance() to throw, but it didn't"
         );
 

@@ -3,6 +3,7 @@ package iteration2;
 import io.restassured.specification.ResponseSpecification;
 import iteration1.BaseTest;
 import models.CreateUserRequest;
+import models.GetProfileResponse;
 import models.UpdateProfileRequest;
 import models.UpdateProfileResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,5 +66,6 @@ public class ChangeNameTest extends BaseTest {
                 Endpoint.UPDATE_PROFILE,
                 badRequestSpec)
                 .put(updateProfileRequest);
+        assertEquals(invalidName, response.getCustomer().getName(), "Имя пользователя не обновилось корректно");
     }
 }
