@@ -8,9 +8,12 @@ import io.restassured.specification.ResponseSpecification;
 import iteration1.BaseTest;
 import models.CreateAccountResponse;
 import models.CreateUserRequest;
+import models.CreateUserResponse;
 import models.DepositRequest;
 import org.apache.http.HttpStatus;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -24,6 +27,7 @@ import requests.steps.AdminSteps;
 import specs.RequestSpecs;
 import specs.ResponseSpecs;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -31,7 +35,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class DepositTest extends BaseTest {
     static final double EPSILON = 0.001;
 
@@ -40,6 +44,7 @@ public class DepositTest extends BaseTest {
     private ValidatedCrudRequester validatedCrudRequester;
     private CreateUserRequest userRequest;
     private List<CreateAccountResponse> userAccounts;
+    private static final List<String> createdUsernames = new ArrayList<>();
 
     private List<CreateAccountResponse> getUserAccounts(RequestSpecification requestSpec) {
         Endpoint endpoint = Endpoint.GET_ACCOUNTS;
@@ -57,6 +62,7 @@ public class DepositTest extends BaseTest {
     void setUp() {
         // Создание пользователя
         userRequest = AdminSteps.createUser();
+        createdUsernames.add(userRequest.getUsername());
 
         // Создание двух аккаунтов для пользователя
         crudRequester = new CrudRequester(
@@ -200,7 +206,27 @@ public class DepositTest extends BaseTest {
                 Endpoint.DEPOSIT, responseSpec)
                 .post(depositRequest);
 
-        double updatedBalance = accountRequester.getAccountBalanceById(nonExistentAccountId);
-        assertThat(updatedBalance, is(initialBalance));
+        double updatedBalanceOwn = accountRequester.getAccountBalanceById(ownId);
+        assertThat(updatedBalanceOwn, is(initialBalance));
+    }
+
+    @AfterAll
+    static void cleanUpUsers() {
+        // 1) Получаем всех пользователей
+        List<CreateUserResponse> allUsers = AdminSteps.getAllUsers();
+
+        // 2) Удаляем только тех, кто был создан в ходе тестов (по username)
+        allUsers.stream()
+                .filter(u -> createdUsernames.contains(u.getUsername()))
+                .forEach(u -> AdminSteps.deleteUserById(u.getId()));
+
+// 3) Проверяем, что тестовых не осталось
+        List<CreateUserResponse> afterCleanup = AdminSteps.getAllUsers();
+        boolean anyTestUsersLeft = afterCleanup.stream()
+                .anyMatch(u -> createdUsernames.contains(u.getUsername()));
+
+        org.junit.jupiter.api.Assertions.assertFalse(
+                anyTestUsersLeft,
+                "После очистки не должно остаться ни одного тестового пользователя");
     }
 }

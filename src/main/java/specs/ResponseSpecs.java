@@ -28,6 +28,14 @@ public class ResponseSpecs {
                 .build();
     }
 
+    public static ResponseSpecification requestReturnsOKWithJsonMessage(String expectedMessage) {
+        return new ResponseSpecBuilder()
+                .expectStatusCode(HttpStatus.SC_OK)
+                .expectContentType(ContentType.JSON)
+                .expectBody(equalTo(expectedMessage))
+                .build();
+    }
+
     public static ResponseSpecification requestReturnsBadRequest(String errorKey, String errorValue) {
         return defaultResponseBuilder()
                 .expectStatusCode(HttpStatus.SC_BAD_REQUEST)
@@ -38,9 +46,11 @@ public class ResponseSpecs {
     public static ResponseSpecification requestReturnsBadRequestWithoutKey(String errorValue) {
         return defaultResponseBuilder()
                 .expectStatusCode(HttpStatus.SC_BAD_REQUEST)
+                .expectContentType(ContentType.JSON)
                 .expectBody(equalTo(errorValue))
                 .build();
     }
+
 
     public static ResponseSpecification requestReturnsBadRequestWithoutKeyWithOutValue() {
         return defaultResponseBuilder()

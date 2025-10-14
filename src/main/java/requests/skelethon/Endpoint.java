@@ -53,8 +53,13 @@ public enum Endpoint {
             "/customer/accounts",
             BaseModel.class,
             GetUserAccounts.class
-    );
+    ),
 
+    DELETE_USER(
+            "/admin/users/{id}",
+            DeleteUserRequest.class,
+            DeleteUserResponse.class
+    );
 
     private final String endpoint;
     private Class<? extends BaseModel> requestModel;

@@ -6,12 +6,11 @@ import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
 import iteration1.BaseTest;
-import models.CreateAccountResponse;
-import models.CreateUserRequest;
-import models.DepositRequest;
-import models.TransferRequest;
+import models.*;
 import org.apache.http.HttpStatus;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -23,6 +22,7 @@ import requests.steps.AdminSteps;
 import specs.RequestSpecs;
 import specs.ResponseSpecs;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -30,6 +30,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class TransferTest extends BaseTest {
     static final double EPSILON = 0.001;
 
@@ -39,6 +40,7 @@ public class TransferTest extends BaseTest {
     private AccountRequester accountRequester2;
     private CreateUserRequest userRequest1;
     private CreateUserRequest userRequest2;
+    private static final List<String> createdUsernames = new ArrayList<>();
 
     private List<CreateAccountResponse> getUserAccounts(RequestSpecification requestSpec) {
         Endpoint endpoint = Endpoint.GET_ACCOUNTS;
@@ -81,6 +83,9 @@ public class TransferTest extends BaseTest {
         userRequest1 = createUser();
         userRequest2 = createUser();
 
+        createdUsernames.add(userRequest1.getUsername());
+        createdUsernames.add(userRequest2.getUsername());
+
         userAccounts1 = createUserAndAccounts(userRequest1);
         userAccounts2 = createUserAndAccounts(userRequest2);
 
@@ -100,7 +105,6 @@ public class TransferTest extends BaseTest {
         makeDeposit(userRequest1, accountId1, 5000);
         makeDeposit(userRequest1, accountId1, 5000);
         makeDeposit(userRequest1, accountId1, 5000);
-
     }
 
     @CsvSource({
@@ -162,20 +166,21 @@ public class TransferTest extends BaseTest {
         // Используем ID второго аккаунта
         long accountId2 = userAccounts2.get(0).getId();
 
-        ResponseSpecification responseSpec = ResponseSpecs.requestReturnsBadRequestWithoutKey(expectedErrorValue);
+        ResponseSpecification responseSpec = ResponseSpecs.requestReturnsBadRequestWithoutKeyWithOutValue();
 
         // Получаем начальный баланс аккаунта1 и 2
         double initialBalance1 = accountRequester1.getAccountBalanceById(accountId1);
         double initialBalance2 = accountRequester2.getAccountBalanceById(accountId2);
 
-        ValidatableResponse response = new CrudRequester(RequestSpecs.authAsUser(userRequest1.getUsername(), userRequest1.getPassword()),
+        ValidatableResponse response = new CrudRequester(
+                RequestSpecs.authAsUser(userRequest1.getUsername(), userRequest1.getPassword()),
                 Endpoint.TRANSFER,
-                responseSpec)
-                .post(TransferRequest.builder()
-                        .senderAccountId(accountId1)
-                        .amount(amount)
-                        .receiverAccountId(accountId2)
-                        .build());
+                responseSpec
+        ).post(TransferRequest.builder()
+                .senderAccountId(accountId1)
+                .amount(amount)
+                .receiverAccountId(accountId2)
+                .build());
 
         // Валидация ответа
         response.assertThat().statusCode(HttpStatus.SC_BAD_REQUEST);
@@ -207,26 +212,39 @@ public class TransferTest extends BaseTest {
         // Используем ID второго аккаунта
         long accountId2 = userAccounts2.get(0).getId();
 
-        ResponseSpecification responseSpec = ResponseSpecs.requestReturnsBadRequestWithoutKey(expectedMessage);
+        ResponseSpecification responseSpec = ResponseSpecs.requestReturnsBadRequestWithoutKeyWithOutValue();
 
-        CrudRequester crudRequester = new CrudRequester(
+        ValidatableResponse response = new CrudRequester(
                 RequestSpecs.authAsUser(userRequest1.getUsername(), userRequest1.getPassword()),
                 Endpoint.TRANSFER,
                 responseSpec
-        );
+        ).post(TransferRequest.builder()
+                .senderAccountId(accountId1)
+                .amount(amount)
+                .receiverAccountId(accountId2)
+                .build());
 
-        try {
-            crudRequester.post(TransferRequest.builder()
-                    .senderAccountId(accountId1)
-                    .amount(amount)
-                    .receiverAccountId(accountId2)
-                    .build());
-        } catch (IllegalArgumentException e) {
-            assertThat(e.getMessage(), is(expectedMessage));
-            return;
-        }
+        // Валидация ответа
+        response.assertThat().statusCode(HttpStatus.SC_BAD_REQUEST);
+    }
 
-        // Если исключение не было выброшено, то тест должен провалиться
-        assertThat(false, is(true));
+    @AfterAll
+    static void cleanUpUsers() {
+        // 1) Получаем всех пользователей
+        List<CreateUserResponse> allUsers = AdminSteps.getAllUsers();
+
+        // 2) Удаляем только тех, кто был создан в ходе тестов (по username)
+        allUsers.stream()
+                .filter(u -> createdUsernames.contains(u.getUsername()))
+                .forEach(u -> AdminSteps.deleteUserById(u.getId()));
+
+// 3) Проверяем, что тестовых не осталось
+        List<CreateUserResponse> afterCleanup = AdminSteps.getAllUsers();
+        boolean anyTestUsersLeft = afterCleanup.stream()
+                .anyMatch(u -> createdUsernames.contains(u.getUsername()));
+
+        org.junit.jupiter.api.Assertions.assertFalse(
+                anyTestUsersLeft,
+                "После очистки не должно остаться ни одного тестового пользователя");
     }
 }

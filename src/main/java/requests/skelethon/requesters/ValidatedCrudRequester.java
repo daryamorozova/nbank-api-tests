@@ -3,9 +3,12 @@ package requests.skelethon.requesters;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
 import models.BaseModel;
+import models.CreateUserResponse;
 import requests.skelethon.Endpoint;
 import requests.skelethon.HttpRequest;
 import requests.skelethon.interfaces.CrudEndpointInterface;
+
+import java.util.List;
 
 public class ValidatedCrudRequester<T extends BaseModel> extends HttpRequest implements CrudEndpointInterface {
     private CrudRequester crudRequester;

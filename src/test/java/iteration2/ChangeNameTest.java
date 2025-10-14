@@ -1,12 +1,10 @@
 package iteration2;
 
-import io.restassured.specification.ResponseSpecification;
 import iteration1.BaseTest;
-import models.CreateUserRequest;
-import models.GetProfileResponse;
-import models.UpdateProfileRequest;
-import models.UpdateProfileResponse;
+import models.*;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import requests.skelethon.Endpoint;
@@ -16,18 +14,23 @@ import requests.steps.AdminSteps;
 import specs.RequestSpecs;
 import specs.ResponseSpecs;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ChangeNameTest extends BaseTest {
-    private CrudRequester crudRequester;
-    private ValidatedCrudRequester validatedCrudRequester;
+
     private CreateUserRequest userRequest;
+    private static final List<String> createdUsernames = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
         // Создание пользователя
         userRequest = AdminSteps.createUser();
+        // Копим username, чтобы потом удалить именно тех, кого создали в тестах
+        createdUsernames.add(userRequest.getUsername());
     }
 
     @ParameterizedTest
@@ -49,23 +52,61 @@ public class ChangeNameTest extends BaseTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "John Michael Doe"
-//            , "John", "", "John  Doe",
-//            "John1 Doe2", "John! @Doe", "1John Doe", "John-Doe",
-//            "John Иванов",
-//            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " +
-//                    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            , "John", "", "John  Doe",
+            "John1 Doe2", "John! @Doe", "1John Doe", "John-Doe",
+            "John Иванов",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " +
+                    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     })
     public void testNegativeChangeName(String invalidName) {
-        UpdateProfileRequest updateProfileRequest = UpdateProfileRequest.builder().name(invalidName).build();
+        var authSpec = RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword());
 
-        // Используем спецификацию ответа для ошибки Bad Request с текстовым сообщением
-        ResponseSpecification badRequestSpec = ResponseSpecs.requestReturnsBadRequestWithoutKey("Name must contain two words with letters only");
+        GetProfileResponse before = new ValidatedCrudRequester<GetProfileResponse>(
+                authSpec,
+                Endpoint.GET_PROFILE,
+                ResponseSpecs.requestReturnsOK()
+        ).get(0L);
+        String beforeName = before.getName();
 
-        UpdateProfileResponse response = new ValidatedCrudRequester<UpdateProfileResponse>(
+        String expected = "Name must contain two words with letters only";
+
+        String error = new CrudRequester(
                 RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
                 Endpoint.UPDATE_PROFILE,
-                badRequestSpec)
-                .put(updateProfileRequest);
-        assertEquals(invalidName, response.getCustomer().getName(), "Имя пользователя не обновилось корректно");
+                ResponseSpecs.requestReturnsBadRequestWithoutKey(expected)
+        ).put(UpdateProfileRequest.builder().name(invalidName).build())
+                .extract()
+                .asString();
+
+        assertEquals(expected, error);
+
+        GetProfileResponse after = new ValidatedCrudRequester<GetProfileResponse>(
+                authSpec,
+                Endpoint.GET_PROFILE,
+                ResponseSpecs.requestReturnsOK()
+        ).get(0L);
+
+        assertEquals(beforeName, after.getName(),
+                "Имя пользователя должно остаться без изменений при некорректном запросе");
+    }
+
+    @AfterAll
+    static void cleanUpUsers() {
+        // 1) Получаем всех пользователей
+        List<CreateUserResponse> allUsers = AdminSteps.getAllUsers();
+
+        // 2) Удаляем только тех, кто был создан в ходе тестов (по username)
+        allUsers.stream()
+                .filter(u -> createdUsernames.contains(u.getUsername()))
+                .forEach(u -> AdminSteps.deleteUserById(u.getId()));
+
+// 3) Проверяем, что тестовых не осталось
+        List<CreateUserResponse> afterCleanup = AdminSteps.getAllUsers();
+        boolean anyTestUsersLeft = afterCleanup.stream()
+                .anyMatch(u -> createdUsernames.contains(u.getUsername()));
+
+        org.junit.jupiter.api.Assertions.assertFalse(
+                anyTestUsersLeft,
+                "После очистки не должно остаться ни одного тестового пользователя");
     }
 }
