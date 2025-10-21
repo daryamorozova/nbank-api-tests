@@ -1,6 +1,6 @@
-package iteration2;
+package iteration2.api;
 
-import iteration1.BaseTest;
+import iteration1.api.BaseTest;
 import models.*;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;

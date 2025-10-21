@@ -1,10 +1,8 @@
-package iteration1;
+package iteration1.api;
 
-import generators.RandomData;
 import generators.RandomModelGenerator;
 import models.CreateUserRequest;
 import models.CreateUserResponse;
-import models.UserRole;
 import models.comparison.ModelAssertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

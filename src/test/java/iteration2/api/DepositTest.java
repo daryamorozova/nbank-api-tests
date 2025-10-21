@@ -1,11 +1,11 @@
-package iteration2;
+package iteration2.api;
 
 import io.restassured.common.mapper.TypeRef;
 import io.restassured.response.Response;
 import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
-import iteration1.BaseTest;
+import iteration1.api.BaseTest;
 import models.CreateAccountResponse;
 import models.CreateUserRequest;
 import models.CreateUserResponse;
