@@ -357,8 +357,6 @@ public class TransferTest {
                 .findFirst().orElseThrow();
 
         assertThat(updated1.getBalance()).isZero();
-
-
         // ШАГ 9: проверка, что баланс юзера2 стал меньше
 
         CreateAccountResponse[] accounts2 = given()
