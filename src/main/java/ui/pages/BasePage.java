@@ -12,6 +12,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 public abstract class BasePage<T extends BasePage> {
     protected SelenideElement usernameInput = $(Selectors.byAttribute("placeholder", "Username"));
     protected SelenideElement passwordInput = $(Selectors.byAttribute("placeholder", "Password"));
+    protected SelenideElement choseAccount = $("select.form-control.account-selector");
+    protected SelenideElement amountInput = $(Selectors.byAttribute("placeholder", "Enter amount"));
+
 
     public abstract String url();
 

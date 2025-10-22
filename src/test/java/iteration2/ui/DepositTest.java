@@ -1,226 +1,89 @@
 package iteration2.ui;
 
-import com.codeborne.selenide.Condition;
-import com.codeborne.selenide.Configuration;
-import com.codeborne.selenide.Selectors;
-import com.codeborne.selenide.Selenide;
 import api.models.CreateAccountResponse;
 import api.models.CreateUserRequest;
-import api.models.LoginUserRequest;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.openqa.selenium.Alert;
-import api.requests.skelethon.Endpoint;
-import api.requests.skelethon.requesters.CrudRequester;
 import api.requests.steps.AdminSteps;
-import api.specs.RequestSpecs;
-import api.specs.ResponseSpecs;
+import api.requests.steps.UserSteps;
+import iteration1.ui.BaseUiTest;
+import org.junit.jupiter.api.Test;
+import ui.pages.BankAlert;
+import ui.pages.DepositPage;
+import ui.pages.UserDashboard;
 
-import java.util.Arrays;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.List;
 
-import static com.codeborne.selenide.Selenide.*;
-import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class DepositTest {
-    @BeforeAll
-    public static void setupSelenoid() {
-        Configuration.remote = "http://localhost:4444/wd/hub";
-        Configuration.baseUrl = "http://192.168.0.107:3000";
-        Configuration.browser = "chrome";
-        Configuration.browserSize = "1920x1080";
-
-        Configuration.browserCapabilities.setCapability("selenoid:options",
-                Map.of("enableVNC", true, "enableLog", true)
-        );
-    }
+public class DepositTest extends BaseUiTest {
 
     @Test
     public void userCanDepositTest() {
-        // ШАГИ ПО НАСТРОЙКЕ ОКРУЖЕНИЯ
-        // ШАГ 1: админ логинится в банке
-        // ШАГ 2: админ создает юзера
-        // ШАГ 3: юзер логинится в банке
-        // ШАГ 4: юзер создает аккаунт
+        CreateUserRequest user = AdminSteps.createUser();
+        authAsUser(user);
 
-        CreateUserRequest userRequest = AdminSteps.createUser();
+        new UserDashboard().open().createNewAccount();
 
-        String userAuthHeader = new CrudRequester(
-                RequestSpecs.unauthSpec(),
-                Endpoint.LOGIN,
-                ResponseSpecs.requestReturnsOK())
-                .post(LoginUserRequest.builder().username(userRequest.getUsername()).password(userRequest.getPassword()).build())
-                .extract()
-                .header("Authorization");
+        UserSteps userSteps = new UserSteps(user.getUsername(), user.getPassword());
+        List<CreateAccountResponse> createdAccounts = userSteps.getAllAccounts();
 
-        // Создание аккаунта для пользователя
-        CrudRequester crudRequester = new CrudRequester(
-                RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
-                Endpoint.ACCOUNTS,
-                ResponseSpecs.entityWasCreated()
-        );
-
-        crudRequester.post(null);
-
-        Selenide.open("/");
-
-        executeJavaScript("localStorage.setItem('authToken', arguments[0]);", userAuthHeader);
-
-        Selenide.open("/dashboard");
-
-        // ШАГИ ТЕСТА
-        // ШАГ 5: юзер переходит на страницу перевода
-
-        $(Selectors.byText("\uD83D\uDCB0 Deposit Money")).click();
-
-        // ШАГ 6: проверка, произошел переход на страницу депозита
-        $(Selectors.byText("\uD83D\uDCB0 Deposit Money")).shouldBe(Condition.visible);
-
-        // ШАГ 7: получение списка аккаунтов пользователя
-
-        CreateAccountResponse[] existingUserAccounts = given()
-                .spec(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()))
-                .get("http://localhost:4111/api/v1/customer/accounts")
-                .then().assertThat()
-                .extract().as(CreateAccountResponse[].class);
-
-
-        CreateAccountResponse createdAccount = existingUserAccounts[0];
-
+        assertThat(createdAccounts).hasSize(1);
+        CreateAccountResponse createdAccount = createdAccounts.getFirst();
         assertThat(createdAccount).isNotNull();
+
         String accountNumber = createdAccount.getAccountNumber();
 
-        // ШАГ 8: перевод и проверка успешного перевода
+        new UserDashboard().checkAlertMessageAndAccept(
+                BankAlert.NEW_ACCOUNT_CREATED.getMessage() + accountNumber
+        );
+
+        assertThat(createdAccount.getBalance()).isZero();
 
         Double sumOfDeposit = 500.0;
 
-        $("select.form-control.account-selector")
-                .shouldBe(Condition.visible)
-                .selectOptionContainingText(accountNumber);
+        new DepositPage().open().deposit(accountNumber, sumOfDeposit)
+                .checkAlertMessageAndAccept(STR."\{BankAlert.DEPOSIT_SUCCESS.getMessage()} $\{sumOfDeposit} to account \{accountNumber}");
 
-
-        $(".form-control.deposit-input").setValue(String.valueOf(sumOfDeposit));
-
-
-        $("button.btn.btn-primary.shadow-custom.mt-4").click();
-
-        Alert alert = switchTo().alert();
-        String alertText = alert.getText();
-
-        assertThat(alertText).contains("✅ Successfully deposited"); //✅ Successfully deposited $500 to account ACC1!
-
-        alert.accept();
-
-        Pattern pattern = Pattern.compile(STR."Successfully deposited $\{sumOfDeposit}");
-        Matcher matcher = pattern.matcher(alertText);
-
-        matcher.find();
-
-        // ШАГ 9: проверка, что баланс был пополнен
-
-        CreateAccountResponse[] accounts = given()
-                .spec(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()))
-                .get("http://localhost:4111/api/v1/customer/accounts")
-                .then().extract().as(CreateAccountResponse[].class);
-
-        CreateAccountResponse updated = Arrays.stream(accounts)
+        CreateAccountResponse updatedAccount = userSteps.getAllAccounts().stream()
                 .filter(a -> a.getAccountNumber().equals(accountNumber))
-                .findFirst().orElseThrow();
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Account not found after deposit"));
 
-        assertThat(updated.getBalance()).isEqualTo(sumOfDeposit);
+        assertThat(updatedAccount.getBalance()).isEqualTo(sumOfDeposit);
+
     }
 
     @Test
     public void userCanNotDepositTest() {
-        // ШАГИ ПО НАСТРОЙКЕ ОКРУЖЕНИЯ
-        // ШАГ 1: админ логинится в банке
-        // ШАГ 2: админ создает юзера
-        // ШАГ 3: юзер логинится в банке
-        // ШАГ 4: юзер создает аккаунт
+        CreateUserRequest user = AdminSteps.createUser();
+        authAsUser(user);
 
-        CreateUserRequest userRequest = AdminSteps.createUser();
+        new UserDashboard().open().createNewAccount();
 
-        String userAuthHeader = new CrudRequester(
-                RequestSpecs.unauthSpec(),
-                Endpoint.LOGIN,
-                ResponseSpecs.requestReturnsOK())
-                .post(LoginUserRequest.builder().username(userRequest.getUsername()).password(userRequest.getPassword()).build())
-                .extract()
-                .header("Authorization");
+        UserSteps userSteps = new UserSteps(user.getUsername(), user.getPassword());
+        List<CreateAccountResponse> createdAccounts = userSteps.getAllAccounts();
 
-        // Создание аккаунта для пользователя
-        CrudRequester crudRequester = new CrudRequester(
-                RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
-                Endpoint.ACCOUNTS,
-                ResponseSpecs.entityWasCreated()
-        );
-
-        crudRequester.post(null);
-
-        Selenide.open("/");
-
-        executeJavaScript("localStorage.setItem('authToken', arguments[0]);", userAuthHeader);
-
-        Selenide.open("/dashboard");
-
-        // ШАГИ ТЕСТА
-        // ШАГ 5: юзер переходит на страницу перевода
-
-        $(Selectors.byText("\uD83D\uDCB0 Deposit Money")).click();
-
-        // ШАГ 6: проверка, произошел переход на страницу депозита
-        $(Selectors.byText("\uD83D\uDCB0 Deposit Money")).shouldBe(Condition.visible);
-
-        // ШАГ 7: получение списка аккаунтов пользователя
-
-        CreateAccountResponse[] existingUserAccounts = given()
-                .spec(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()))
-                .get("http://localhost:4111/api/v1/customer/accounts")
-                .then().assertThat()
-                .extract().as(CreateAccountResponse[].class);
-
-
-        CreateAccountResponse createdAccount = existingUserAccounts[0];
-
+        assertThat(createdAccounts).hasSize(1);
+        CreateAccountResponse createdAccount = createdAccounts.getFirst();
         assertThat(createdAccount).isNotNull();
+
         String accountNumber = createdAccount.getAccountNumber();
 
-        // ШАГ 8: перевод и проверка ошибки перевода
+        new UserDashboard().checkAlertMessageAndAccept(
+                BankAlert.NEW_ACCOUNT_CREATED.getMessage() + accountNumber
+        );
+
+        assertThat(createdAccount.getBalance()).isZero();
 
         Double sumOfDeposit = 10000.0;
 
-        $("select.form-control.account-selector")
-                .shouldBe(Condition.visible)
-                .selectOptionContainingText(accountNumber);
+        new DepositPage().open().deposit(accountNumber, sumOfDeposit)
+                .checkAlertMessageAndAccept(BankAlert.DEPOSIT_ERROR.getMessage());
 
-
-        $(".form-control.deposit-input").setValue(String.valueOf(sumOfDeposit));
-
-
-        $("button.btn.btn-primary.shadow-custom.mt-4").click();
-
-        Alert alert = switchTo().alert();
-        String alertText = alert.getText();
-
-        assertThat(alertText).contains("❌ Please deposit less or equal to 5000$.");
-
-        alert.accept();
-
-
-        // ШАГ 9: проверка, что баланс не был пополнен
-
-        CreateAccountResponse[] accounts = given()
-                .spec(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()))
-                .get("http://localhost:4111/api/v1/customer/accounts")
-                .then().extract().as(CreateAccountResponse[].class);
-
-        CreateAccountResponse updated = Arrays.stream(accounts)
+        CreateAccountResponse updatedAccount = userSteps.getAllAccounts().stream()
                 .filter(a -> a.getAccountNumber().equals(accountNumber))
-                .findFirst().orElseThrow();
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Account not found after deposit"));
 
-        assertThat(updated.getBalance()).isZero();
+        assertThat(updatedAccount.getBalance()).isZero();
     }
 }
