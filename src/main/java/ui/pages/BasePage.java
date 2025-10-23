@@ -14,6 +14,7 @@ public abstract class BasePage<T extends BasePage> {
     protected SelenideElement passwordInput = $(Selectors.byAttribute("placeholder", "Password"));
     protected SelenideElement choseAccount = $("select.form-control.account-selector");
     protected SelenideElement amountInput = $(Selectors.byAttribute("placeholder", "Enter amount"));
+    protected SelenideElement homeButton = $(Selectors.byText("\uD83C\uDFE0 Home"));
 
 
     public abstract String url();
@@ -31,5 +32,10 @@ public abstract class BasePage<T extends BasePage> {
         assertThat(alert.getText()).contains(bankAlert);
         alert.accept();
         return (T) this;
+    }
+
+    public T goHome() {
+        homeButton.click();
+        return Selenide.open("/dashboard", (Class<T>) this.getClass());
     }
 }

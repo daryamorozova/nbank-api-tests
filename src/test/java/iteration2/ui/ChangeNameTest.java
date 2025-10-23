@@ -1,133 +1,70 @@
 package iteration2.ui;
 
-import com.codeborne.selenide.Condition;
-import com.codeborne.selenide.Configuration;
-import com.codeborne.selenide.Selectors;
-import com.codeborne.selenide.Selenide;
 import api.models.CreateUserRequest;
-import api.models.LoginUserRequest;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.openqa.selenium.Alert;
-import api.requests.skelethon.Endpoint;
-import api.requests.skelethon.requesters.CrudRequester;
+import api.models.GetProfileResponse;
 import api.requests.steps.AdminSteps;
-import api.specs.RequestSpecs;
-import api.specs.ResponseSpecs;
+import api.requests.steps.UserSteps;
+import iteration1.ui.BaseUiTest;
+import org.junit.jupiter.api.Test;
+import ui.pages.BankAlert;
+import ui.pages.ProfilePage;
+import ui.pages.UserDashboard;
 
-import java.util.Map;
-
-import static com.codeborne.selenide.Selenide.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ChangeNameTest {
-    @BeforeAll
-    public static void setupSelenoid() {
-        Configuration.remote = "http://localhost:4444/wd/hub";
-        Configuration.baseUrl = "http://192.168.0.107:3000";
-        Configuration.browser = "chrome";
-        Configuration.browserSize = "1920x1080";
-
-        Configuration.browserCapabilities.setCapability("selenoid:options",
-                Map.of("enableVNC", true, "enableLog", true)
-        );
-    }
+public class ChangeNameTest extends BaseUiTest {
 
     @Test
     public void userCanChangeNameTest() {
-        // ШАГИ ПО НАСТРОЙКЕ ОКРУЖЕНИЯ
-        // ШАГ 1: админ логинится в банке
-        // ШАГ 2: админ создает юзера
-        // ШАГ 3: юзер логинится в банке
+        // Запросить имя до изменения через бэкенд
+        // изменить через фронт
+        // посмотреть что на фронте поменялось имя
+        // запросить имя после изменения через бэкенд
 
-        CreateUserRequest userRequest = AdminSteps.createUser();
+        CreateUserRequest user = AdminSteps.createUser();
+        authAsUser(user);
 
-        String userAuthHeader = new CrudRequester(
-                RequestSpecs.unauthSpec(),
-                Endpoint.LOGIN,
-                ResponseSpecs.requestReturnsOK())
-                .post(LoginUserRequest.builder().username(userRequest.getUsername()).password(userRequest.getPassword()).build())
-                .extract()
-                .header("Authorization");
+        UserSteps userApi = new UserSteps(user.getUsername(), user.getPassword());
 
-        Selenide.open("/");
-        executeJavaScript("localStorage.setItem('authToken', arguments[0]);", userAuthHeader);
-        Selenide.open("/dashboard");
+        GetProfileResponse profileBefore = userApi.getProfile();
+        String nameBefore = profileBefore.getName();
 
-        // ШАГИ ТЕСТА
-        // ШАГ 4: юзер видит текущее имя
-        $(Selectors.byClassName("user-name")).shouldBe(Condition.visible).shouldHave(Condition.text("Noname"));
-
-        // ШАГ 5: юзер переходит в профиль
-        $(Selectors.byClassName("user-name")).click();
-        $(Selectors.byText("✏\uFE0F Edit Profile")).shouldBe(Condition.visible);
-
-        // ШАГ 6: юзер редактирует имя
-        $(Selectors.byAttribute("placeholder", "Enter new name")).shouldBe(Condition.visible);
+        new UserDashboard().open();
         String newName = "John Doe";
-        $(Selectors.byAttribute("placeholder", "Enter new name")).setValue(newName);
+        new ProfilePage().changeName(newName)
+                .checkAlertMessageAndAccept(BankAlert.CHANGE_NAME_SUCCESS.getMessage());
 
-        $(Selectors.byText("\uD83D\uDCBE Save Changes")).click();
+        new UserDashboard()
+                .open()
+                .shouldShowUserName(newName);
 
-        // ШАГ 7: юзер видит алерт
-        Alert alert = switchTo().alert();
-        String alertText = alert.getText();
-        assertThat(alertText).contains("✅ Name updated successfully!");
-        alert.accept();
+        GetProfileResponse profileAfter = userApi.getProfile();
+        String nameAfter = profileAfter.getName();
 
-        // ШАГ 8: юзер возвращается на дашборд и проверяет имя
-        $(Selectors.byText("\uD83C\uDFE0 Home")).click();
-        Selenide.refresh();
-        $(Selectors.byClassName("welcome-text")).shouldBe(Condition.visible).shouldHave(Condition.text(STR."Welcome, \{newName}"));
-        $(Selectors.byClassName("user-name")).shouldBe(Condition.visible).shouldHave(Condition.text(newName));
+        assertThat(nameAfter).isEqualTo(newName);
+        assertThat(nameAfter).isNotEqualTo(nameBefore);
     }
 
     @Test
     public void userCanNotChangeNameTest() {
-        // ШАГИ ПО НАСТРОЙКЕ ОКРУЖЕНИЯ
-        // ШАГ 1: админ логинится в банке
-        // ШАГ 2: админ создает юзера
-        // ШАГ 3: юзер логинится в банке
+        CreateUserRequest user = AdminSteps.createUser();
+        authAsUser(user);
 
-        CreateUserRequest userRequest = AdminSteps.createUser();
+        UserSteps userApi = new UserSteps(user.getUsername(), user.getPassword());
 
-        String userAuthHeader = new CrudRequester(
-                RequestSpecs.unauthSpec(),
-                Endpoint.LOGIN,
-                ResponseSpecs.requestReturnsOK())
-                .post(LoginUserRequest.builder().username(userRequest.getUsername()).password(userRequest.getPassword()).build())
-                .extract()
-                .header("Authorization");
+        GetProfileResponse profileBefore = userApi.getProfile();
 
-        Selenide.open("/");
-        executeJavaScript("localStorage.setItem('authToken', arguments[0]);", userAuthHeader);
-        Selenide.open("/dashboard");
-
-        // ШАГИ ТЕСТА
-        // ШАГ 4: юзер видит текущее имя
-        $(Selectors.byClassName("user-name")).shouldBe(Condition.visible).shouldHave(Condition.text("Noname"));
-
-        // ШАГ 5: юзер переходит в профиль
-        $(Selectors.byClassName("user-name")).click();
-        $(Selectors.byText("✏\uFE0F Edit Profile")).shouldBe(Condition.visible);
-
-        // ШАГ 6: юзер редактирует имя
-        $(Selectors.byAttribute("placeholder", "Enter new name")).shouldBe(Condition.visible);
+        new UserDashboard().open();
         String newName = "John Doe Mark";
-        $(Selectors.byAttribute("placeholder", "Enter new name")).setValue(newName);
+        new ProfilePage().changeName(newName)
+                .checkAlertMessageAndAccept(BankAlert.CHANGE_NAME_ERROR.getMessage());
 
-        $(Selectors.byText("\uD83D\uDCBE Save Changes")).click();
+        new UserDashboard()
+                .open()
+                .shouldShowUserNameFromApi(profileBefore);
 
-        // ШАГ 7: юзер видит алерт
-        Alert alert = switchTo().alert();
-        String alertText = alert.getText();
-        assertThat(alertText).contains("Name must contain two words with letters only");
-        alert.accept();
-
-        // ШАГ 8: юзер возвращается на дашборд и проверяет имя
-        $(Selectors.byText("\uD83C\uDFE0 Home")).click();
-        Selenide.refresh();
-        $(Selectors.byClassName("welcome-text")).shouldBe(Condition.visible).shouldHave(Condition.text("Welcome, Noname"));
-        $(Selectors.byClassName("user-name")).shouldBe(Condition.visible).shouldHave(Condition.text("Noname"));
+        GetProfileResponse profileAfter = userApi.getProfile();
+        assertThat(profileAfter.getName()).isNotEqualTo(newName);
+        assertThat(profileAfter.getName()).isEqualTo(profileBefore.getName());
     }
 }

@@ -44,4 +44,12 @@ public class ValidatedCrudRequester<T extends BaseModel> extends HttpRequest imp
         T[] array = (T[]) crudRequester.getAll(clazz).extract().as(clazz);
         return Arrays.asList(array);
     }
+
+    @SuppressWarnings("unchecked")
+    public T getOne(Class<T> clazz) {
+        return (T) crudRequester
+                .getAll(clazz)                 // делаем GET без id (ваш getAll уже так делает)
+                .extract()
+                .as(clazz);                    // ВАЖНО: clazz = GetProfileResponse.class
+    }
 }

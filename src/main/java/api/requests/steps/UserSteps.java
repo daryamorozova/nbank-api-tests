@@ -1,8 +1,10 @@
 package api.requests.steps;
 
 import api.models.CreateAccountResponse;
-import api.requests.skelethon.requesters.ValidatedCrudRequester;
+import api.models.GetProfileResponse;
+import api.models.UpdateProfileResponse;
 import api.requests.skelethon.Endpoint;
+import api.requests.skelethon.requesters.ValidatedCrudRequester;
 import api.specs.RequestSpecs;
 import api.specs.ResponseSpecs;
 
@@ -22,5 +24,13 @@ public class UserSteps {
                 RequestSpecs.authAsUser(username, password),
                 Endpoint.GET_ACCOUNTS,
                 ResponseSpecs.requestReturnsOK()).getAll(CreateAccountResponse[].class);
+    }
+
+    public GetProfileResponse getProfile() {
+        return new ValidatedCrudRequester<GetProfileResponse>(
+                RequestSpecs.authAsUser(username, password),
+                Endpoint.GET_PROFILE,
+                ResponseSpecs.requestReturnsOK()
+        ).getOne(GetProfileResponse.class); // 👈 одиночный объект, не массив
     }
 }
