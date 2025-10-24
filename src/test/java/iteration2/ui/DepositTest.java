@@ -25,7 +25,7 @@ public class DepositTest extends BaseUiTest {
         List<CreateAccountResponse> createdAccounts = steps.getAllAccounts();
         assertThat(createdAccounts).hasSize(1);
 
-        CreateAccountResponse firstCreatedAccount = createdAccounts.getFirst(); // вместо getFirst()
+        CreateAccountResponse firstCreatedAccount = createdAccounts.getFirst();
         String accountNumber = firstCreatedAccount.getAccountNumber();
 
         new UserDashboard().checkAlertMessageAndAccept
@@ -62,7 +62,7 @@ public class DepositTest extends BaseUiTest {
         List<CreateAccountResponse> createdAccounts = steps.getAllAccounts();
         assertThat(createdAccounts).hasSize(1);
 
-        CreateAccountResponse firstCreatedAccount = createdAccounts.getFirst(); // вместо getFirst()
+        CreateAccountResponse firstCreatedAccount = createdAccounts.getFirst();
         String accountNumber = firstCreatedAccount.getAccountNumber();
 
         new UserDashboard().checkAlertMessageAndAccept

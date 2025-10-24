@@ -1,181 +1,114 @@
 package iteration2.ui;
 
 import api.models.CreateAccountResponse;
-import api.models.CreateUserRequest;
-import api.requests.steps.AdminSteps;
-import api.requests.steps.UserSteps;
+import common.annotations.UserSession;
+import common.storage.SessionStorage;
 import iteration1.ui.BaseUiTest;
 import org.junit.jupiter.api.Test;
 import ui.pages.BankAlert;
 import ui.pages.DepositPage;
 import ui.pages.TransferPage;
-import ui.pages.UserDashboard;
-
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.offset;
 
 public class TransferTest extends BaseUiTest {
 
     @Test
+    @UserSession(2)
     public void userCanTransferTest() {
-        CreateUserRequest user1 = AdminSteps.createUser();
-        authAsUser(user1);
+        var senderSteps = SessionStorage.getSteps(1);
+        var receiverSteps = SessionStorage.getSteps(2);
 
-        new UserDashboard().open().createNewAccount();
+        // 1) Создать аккаунты через API отдельно для каждого пользователя
+        CreateAccountResponse senderAcc = senderSteps.createAccount();
+        CreateAccountResponse receiverAcc = receiverSteps.createAccount();
 
-        UserSteps userSteps1 = new UserSteps(user1.getUsername(), user1.getPassword());
-        List<CreateAccountResponse> createdAccounts1 = userSteps1.getAllAccounts();
+        assertThat(senderAcc.getBalance()).isZero();
+        assertThat(receiverAcc.getBalance()).isZero();
 
-        assertThat(createdAccounts1).hasSize(1);
-        CreateAccountResponse createdAccount1 = createdAccounts1.getFirst();
-        assertThat(createdAccount1).isNotNull();
-
-        String accountNumber1 = createdAccount1.getAccountNumber();
-
-        new UserDashboard().checkAlertMessageAndAccept(
-                BankAlert.NEW_ACCOUNT_CREATED.getMessage() + accountNumber1
-        );
-
-        assertThat(createdAccount1.getBalance()).isZero();
-
-
-        CreateUserRequest user2 = AdminSteps.createUser();
-        authAsUser(user2);
-
-        new UserDashboard().open().createNewAccount();
-
-        UserSteps userSteps2 = new UserSteps(user2.getUsername(), user2.getPassword());
-        List<CreateAccountResponse> createdAccounts2 = userSteps2.getAllAccounts();
-
-        assertThat(createdAccounts2).hasSize(1);
-        CreateAccountResponse createdAccount2 = createdAccounts2.getFirst();
-        assertThat(createdAccount2).isNotNull();
-
-        String accountNumber2 = createdAccount2.getAccountNumber();
-
-        new UserDashboard().checkAlertMessageAndAccept(
-                BankAlert.NEW_ACCOUNT_CREATED.getMessage() + accountNumber2
-        );
-
-        assertThat(createdAccount2.getBalance()).isZero();
-
-        // начальный депозит для пользователя 2
+        // начальный депозит для пользователя
         Double sumOfDeposit = 5000.0;
 
-        new DepositPage().open().deposit(accountNumber2, sumOfDeposit)
-                .checkAlertMessageAndAccept(STR."\{BankAlert.DEPOSIT_SUCCESS.getMessage()} $\{sumOfDeposit} to account \{accountNumber2}");
+        new DepositPage().open().deposit(senderAcc.getAccountNumber(), sumOfDeposit)
+                .checkAlertMessageAndAccept(STR."\{BankAlert.DEPOSIT_SUCCESS.getMessage()} $\{sumOfDeposit} to account \{senderAcc.getAccountNumber()}");
 
-        CreateAccountResponse updatedAccount2 = userSteps2.getAllAccounts().stream()
-                .filter(a -> a.getAccountNumber().equals(accountNumber2))
+        var senderAfterDeposit = senderSteps.getAllAccounts().stream()
+                .filter(a -> a.getAccountNumber().equals(senderAcc.getAccountNumber()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("Account not found after deposit"));
-
-        // Баланс отправителя после депозита
-        Double initialBalance2 = updatedAccount2.getBalance();
-        assertThat(initialBalance2).isEqualTo(sumOfDeposit);
+                .orElseThrow();
+        assertThat(senderAfterDeposit.getBalance()).isEqualByComparingTo(sumOfDeposit);
 
         // осуществление трансфера
         Double sumOfTransfer = 500.0;
         String recipientName = "Name";
 
-        new TransferPage().open().transfer(accountNumber2, recipientName, accountNumber1, sumOfTransfer)
-                .checkAlertMessageAndAccept(STR."\{BankAlert.TRANSFER_SUCCESS.getMessage()} $\{sumOfTransfer} to account \{accountNumber1}");
+        new TransferPage().open().transfer(senderAcc.getAccountNumber(), recipientName, receiverAcc.getAccountNumber(), sumOfTransfer)
+                .checkAlertMessageAndAccept(STR."\{BankAlert.TRANSFER_SUCCESS.getMessage()} $\{sumOfTransfer} to account \{receiverAcc.getAccountNumber()}");
 
-        CreateAccountResponse afterTransferAccount2 = userSteps2.getAllAccounts().stream()
-                .filter(a -> a.getAccountNumber().equals(accountNumber2))
+
+        var senderAfterTransfer = senderSteps.getAllAccounts().stream()
+                .filter(a -> a.getAccountNumber().equals(senderAcc.getAccountNumber()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("Account not found after deposit"));
+                .orElseThrow();
 
-        Double afterTransferBalance2 = initialBalance2 - sumOfTransfer;
-        assertThat(afterTransferAccount2.getBalance()).isEqualTo(afterTransferBalance2);
-
-        CreateAccountResponse afterTransferAccount1 = userSteps1.getAllAccounts().stream()
-                .filter(a -> a.getAccountNumber().equals(accountNumber1))
+        var receiverAfterTransfer = receiverSteps.getAllAccounts().stream()
+                .filter(a -> a.getAccountNumber().equals(receiverAcc.getAccountNumber()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("Account not found after deposit"));
+                .orElseThrow();
 
-        assertThat(afterTransferAccount1.getBalance()).isEqualTo(sumOfTransfer);
+        assertThat(senderAfterTransfer.getBalance())
+                .isCloseTo(
+                        sumOfDeposit - sumOfTransfer, // вычисляем ожидаемое значение
+                        offset(0.001));
+        assertThat(receiverAfterTransfer.getBalance())
+                .isEqualByComparingTo(sumOfTransfer);
     }
 
     @Test
+    @UserSession(2)
     public void userCanNotTransferTest() {
-        CreateUserRequest user1 = AdminSteps.createUser();
-        authAsUser(user1);
+        var senderSteps = SessionStorage.getSteps(1);
+        var receiverSteps = SessionStorage.getSteps(2);
 
-        new UserDashboard().open().createNewAccount();
+        // 1) Создать аккаунты через API отдельно для каждого пользователя
+        CreateAccountResponse senderAcc = senderSteps.createAccount();
+        CreateAccountResponse receiverAcc = receiverSteps.createAccount();
 
-        UserSteps userSteps1 = new UserSteps(user1.getUsername(), user1.getPassword());
-        List<CreateAccountResponse> createdAccounts1 = userSteps1.getAllAccounts();
+        assertThat(senderAcc.getBalance()).isZero();
+        assertThat(receiverAcc.getBalance()).isZero();
 
-        assertThat(createdAccounts1).hasSize(1);
-        CreateAccountResponse createdAccount1 = createdAccounts1.getFirst();
-        assertThat(createdAccount1).isNotNull();
-
-        String accountNumber1 = createdAccount1.getAccountNumber();
-
-        new UserDashboard().checkAlertMessageAndAccept(
-                BankAlert.NEW_ACCOUNT_CREATED.getMessage() + accountNumber1
-        );
-
-        assertThat(createdAccount1.getBalance()).isZero();
-
-
-        CreateUserRequest user2 = AdminSteps.createUser();
-        authAsUser(user2);
-
-        new UserDashboard().open().createNewAccount();
-
-        UserSteps userSteps2 = new UserSteps(user2.getUsername(), user2.getPassword());
-        List<CreateAccountResponse> createdAccounts2 = userSteps2.getAllAccounts();
-
-        assertThat(createdAccounts2).hasSize(1);
-        CreateAccountResponse createdAccount2 = createdAccounts2.getFirst();
-        assertThat(createdAccount2).isNotNull();
-
-        String accountNumber2 = createdAccount2.getAccountNumber();
-
-        new UserDashboard().checkAlertMessageAndAccept(
-                BankAlert.NEW_ACCOUNT_CREATED.getMessage() + accountNumber2
-        );
-
-        assertThat(createdAccount2.getBalance()).isZero();
-
-        // начальный депозит для пользователя 2
+        // начальный депозит для пользователя
         Double sumOfDeposit = 5000.0;
 
-        new DepositPage().open().deposit(accountNumber2, sumOfDeposit)
-                .checkAlertMessageAndAccept(STR."\{BankAlert.DEPOSIT_SUCCESS.getMessage()} $\{sumOfDeposit} to account \{accountNumber2}");
+        new DepositPage().open().deposit(senderAcc.getAccountNumber(), sumOfDeposit)
+                .checkAlertMessageAndAccept(STR."\{BankAlert.DEPOSIT_SUCCESS.getMessage()} $\{sumOfDeposit} to account \{senderAcc.getAccountNumber()}");
 
-        CreateAccountResponse updatedAccount2 = userSteps2.getAllAccounts().stream()
-                .filter(a -> a.getAccountNumber().equals(accountNumber2))
+        var senderAfterDeposit = senderSteps.getAllAccounts().stream()
+                .filter(a -> a.getAccountNumber().equals(senderAcc.getAccountNumber()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("Account not found after deposit"));
-
-        // Баланс отправителя после депозита
-        Double initialBalance2 = updatedAccount2.getBalance();
-        assertThat(initialBalance2).isEqualTo(sumOfDeposit);
+                .orElseThrow();
+        assertThat(senderAfterDeposit.getBalance()).isEqualByComparingTo(sumOfDeposit);
 
         // осуществление трансфера
         Double sumOfTransfer = 500000.0;
         String recipientName = "Name";
 
-        new TransferPage().open().transfer(accountNumber2, recipientName, accountNumber1, sumOfTransfer)
-                .checkAlertMessageAndAccept(BankAlert.TRANSFER_ERROR.getMessage());
+        new TransferPage().open().transfer(senderAcc.getAccountNumber(), recipientName, receiverAcc.getAccountNumber(), sumOfTransfer)
+                .checkAlertMessageAndAccept(STR."\{BankAlert.TRANSFER_ERROR.getMessage()}");
 
-        CreateAccountResponse afterTransferAccount2 = userSteps2.getAllAccounts().stream()
-                .filter(a -> a.getAccountNumber().equals(accountNumber2))
+
+        var senderAfterTransfer = senderSteps.getAllAccounts().stream()
+                .filter(a -> a.getAccountNumber().equals(senderAcc.getAccountNumber()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("Account not found after deposit"));
+                .orElseThrow();
 
-        Double afterTransferBalance2 = initialBalance2;
-        assertThat(afterTransferAccount2.getBalance()).isEqualTo(afterTransferBalance2);
-
-        CreateAccountResponse afterTransferAccount1 = userSteps1.getAllAccounts().stream()
-                .filter(a -> a.getAccountNumber().equals(accountNumber1))
+        var receiverAfterTransfer = receiverSteps.getAllAccounts().stream()
+                .filter(a -> a.getAccountNumber().equals(receiverAcc.getAccountNumber()))
                 .findFirst()
-                .orElseThrow(() -> new AssertionError("Account not found after deposit"));
+                .orElseThrow();
 
-        assertThat(afterTransferAccount1.getBalance()).isZero();
+        assertThat(senderAfterTransfer.getBalance()).isEqualTo(sumOfDeposit);
+        assertThat(receiverAfterTransfer.getBalance()).isZero();
     }
 }
