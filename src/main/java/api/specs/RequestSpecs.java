@@ -25,7 +25,7 @@ public class RequestSpecs {
                 .setAccept(ContentType.JSON)
                 .addFilters(List.of(new RequestLoggingFilter(),
                         new ResponseLoggingFilter()))
-                .setBaseUri(Config.getProperty("server") + Config.getProperty("apiVersion"));
+                .setBaseUri(Config.getProperty("apiBaseUrl") + Config.getProperty("apiVersion"));
     }
 
     public static RequestSpecification unauthSpec() {
@@ -39,6 +39,12 @@ public class RequestSpecs {
     }
 
     public static RequestSpecification authAsUser(String username, String password) {
+        return defaultRequestSpecBuilder()
+                .addHeader("Authorization", getUserAuthHeader(username, password))
+                .build();
+    }
+
+    public static String getUserAuthHeader(String username, String password) {
         String userAuthHeader;
 
         if (!authHeaders.containsKey(username)) {
@@ -55,8 +61,6 @@ public class RequestSpecs {
             userAuthHeader = authHeaders.get(username);
         }
 
-        return defaultRequestSpecBuilder()
-                .addHeader("Authorization", userAuthHeader)
-                .build();
+        return userAuthHeader;
     }
 }

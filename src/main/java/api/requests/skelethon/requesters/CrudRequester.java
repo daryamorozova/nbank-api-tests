@@ -1,5 +1,6 @@
 package api.requests.skelethon.requesters;
 
+import api.requests.skelethon.interfaces.GetAllEndpointInterface;
 import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
@@ -10,7 +11,7 @@ import api.requests.skelethon.interfaces.CrudEndpointInterface;
 
 import static io.restassured.RestAssured.given;
 
-public class CrudRequester extends HttpRequest implements CrudEndpointInterface  {
+public class CrudRequester extends HttpRequest implements CrudEndpointInterface, GetAllEndpointInterface {
     public CrudRequester(RequestSpecification requestSpecification, Endpoint endpoint, ResponseSpecification responseSpecification) {
         super(requestSpecification, endpoint, responseSpecification);
     }
@@ -58,6 +59,15 @@ public class CrudRequester extends HttpRequest implements CrudEndpointInterface 
                 .delete(endpoint.getEndpoint())
                 .then()
                 .assertThat()
+                .spec(responseSpecification);
+    }
+
+    @Override
+    public ValidatableResponse getAll(Class<?> clazz) {
+        return given()
+                .spec(requestSpecification)
+                .get(endpoint.getEndpoint())
+                .then().assertThat()
                 .spec(responseSpecification);
     }
 }

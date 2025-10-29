@@ -33,14 +33,21 @@ public class AdminSteps {
     }
 
     public static List<CreateUserResponse> getAllUsers() {
-        return new CrudRequester(
+        return new ValidatedCrudRequester<CreateUserResponse>(
                 RequestSpecs.adminSpec(),
                 Endpoint.ADMIN_USER,
-                ResponseSpecs.requestReturnsOK()
-        )
-                .get(0L) // id игнорируется для /admin/users
-                .extract()
-                .jsonPath()
-                .getList("", CreateUserResponse.class);
+                ResponseSpecs.requestReturnsOK()).getAll(CreateUserResponse[].class);
     }
+
+//    public static List<CreateUserResponse> getAllUsers() {
+//        return new CrudRequester(
+//                RequestSpecs.adminSpec(),
+//                Endpoint.ADMIN_USER,
+//                ResponseSpecs.requestReturnsOK()
+//        )
+//                .get(0L) // id игнорируется для /admin/users
+//                .extract()
+//                .jsonPath()
+//                .getList("", CreateUserResponse.class);
+//    }
 }

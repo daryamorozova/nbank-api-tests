@@ -20,20 +20,6 @@ public class Config {
     }
 
     public static String getProperty(String key) {
-        // ПРИОРИТЕТ 1 - системное свойство и если она не пустая, то обращаемся к ней
-        String systemValue = System.getProperty(key);
-        if (systemValue != null) {
-            return systemValue;
-        }
-
-        // ПРИОРИТЕТ 2 - переменная окружения
-        String envKey = key.toUpperCase().replace('.', '_');
-        String envValue = System.getenv(envKey);
-        if (envValue != null) {
-            return envValue;
-        }
-
-        // ПРИОРИТЕТ 3 - config.properties
         return INSTANCE.properties.getProperty(key);
     }
 }
