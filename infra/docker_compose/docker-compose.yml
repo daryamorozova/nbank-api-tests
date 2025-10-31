@@ -31,8 +31,8 @@ services:
   selenoid-ui:
     image: aerokube/selenoid-ui:latest
     ports:
-      - "6567:8080"
-    command: ["--selenoid-uri", "http://selenoid:4444"]
+      - "8080:8080"
+    command: [ "--selenoid-uri", "http://selenoid:4444" ]
     depends_on:
       - selenoid
     networks:
