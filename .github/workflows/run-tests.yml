@@ -1,0 +1,35 @@
+name: Run tests
+
+# триггер
+on: [ push, workflow_dispatch ]
+
+jobs: # аналог этапов
+  run-tests:
+    name: Set up services (review apps) and run tests
+    runs-on: ubuntu-latest
+    steps: # шаги конкретной job
+      - name: Checkout repository # копируем файлы репозитория внутрь CI агента
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'corretto'
+          java-version: '21'
+
+      - name: Cache Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Set up services
+        run: cd infra/docker_compose && bash restart_docker.sh && cd ../..
+
+      - name: Run tests
+        run: ./mvnw clean test -q
+        env:
+          APIBASEURL: http://localhost:4111
+          UIBASEURL: http://frontend
