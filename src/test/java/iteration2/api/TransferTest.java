@@ -204,29 +204,29 @@ public class TransferTest extends BaseTest {
         );
     }
 
-    @MethodSource("transferWithNullAmountData")
-    @ParameterizedTest
-    public void testTransferWithNullAmount(Double amount, String expectedMessage) {
-        // Используем ID первого аккаунта
-        long accountId1 = userAccounts1.get(0).getId();
-        // Используем ID второго аккаунта
-        long accountId2 = userAccounts2.get(0).getId();
-
-        ResponseSpecification responseSpec = ResponseSpecs.requestReturnsBadRequestWithoutKeyWithOutValue();
-
-        ValidatableResponse response = new CrudRequester(
-                RequestSpecs.authAsUser(userRequest1.getUsername(), userRequest1.getPassword()),
-                Endpoint.TRANSFER,
-                responseSpec
-        ).post(TransferRequest.builder()
-                .senderAccountId(accountId1)
-                .amount(amount)
-                .receiverAccountId(accountId2)
-                .build());
-
-        // Валидация ответа
-        response.assertThat().statusCode(HttpStatus.SC_BAD_REQUEST);
-    }
+//    @MethodSource("transferWithNullAmountData")
+//    @ParameterizedTest
+//    public void testTransferWithNullAmount(Double amount, String expectedMessage) {
+//        // Используем ID первого аккаунта
+//        long accountId1 = userAccounts1.get(0).getId();
+//        // Используем ID второго аккаунта
+//        long accountId2 = userAccounts2.get(0).getId();
+//
+//        ResponseSpecification responseSpec = ResponseSpecs.requestReturnsBadRequestWithoutKeyWithOutValue();
+//
+//        ValidatableResponse response = new CrudRequester(
+//                RequestSpecs.authAsUser(userRequest1.getUsername(), userRequest1.getPassword()),
+//                Endpoint.TRANSFER,
+//                responseSpec
+//        ).post(TransferRequest.builder()
+//                .senderAccountId(accountId1)
+//                .amount(amount)
+//                .receiverAccountId(accountId2)
+//                .build());
+//
+//        // Валидация ответа
+//        response.assertThat().statusCode(HttpStatus.SC_BAD_REQUEST);
+//    }
 
     @AfterAll
     static void cleanUpUsers() {

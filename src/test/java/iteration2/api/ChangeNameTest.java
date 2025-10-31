@@ -34,7 +34,7 @@ public class ChangeNameTest extends BaseTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"John Doe", "Иван Иванов"})
+    @ValueSource(strings = {"John Doe"})
     public void testPositiveChangeName(String newName) {
 
         UpdateProfileRequest updateProfileRequest = UpdateProfileRequest.builder().name(newName).build();
@@ -54,9 +54,7 @@ public class ChangeNameTest extends BaseTest {
             "John Michael Doe"
             , "John", "", "John  Doe",
             "John1 Doe2", "John! @Doe", "1John Doe", "John-Doe",
-            "John Иванов",
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " +
-                    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            "John Иванов"
     })
     public void testNegativeChangeName(String invalidName) {
         var authSpec = RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword());

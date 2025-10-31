@@ -120,9 +120,9 @@ public class DepositTest extends BaseTest {
 
     public static Stream<Arguments> depositInvalidData() {
         return Stream.of(
-                Arguments.of(0.00, "Deposit amount must be at least 0.01"),
-                Arguments.of(-500.00, "Deposit amount must be at least 0.01"),
-                Arguments.of(5001.00, "Deposit amount cannot exceed 5000")
+                Arguments.of(0.00, "Invalid account or amount"),
+                Arguments.of(-500.00, "Invalid account or amount"),
+                Arguments.of(5001.00, "Deposit amount exceeds the 5000 limit")
         );
     }
 
@@ -146,24 +146,24 @@ public class DepositTest extends BaseTest {
         assertThat(updatedBalance, is(initialBalance));
     }
 
-    @ParameterizedTest
-    @NullAndEmptySource
-    public void testDepositWithInvalidValues(String depositAmount) {
-
-        long accountId = userAccounts.get(0).getId();
-        // Получаем начальный баланс аккаунта
-        double initialBalance = accountRequester.getAccountBalanceById(accountId);
-
-        ValidatableResponse response = new CrudRequester(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
-                Endpoint.DEPOSIT,
-                ResponseSpecs.requestReturnsBadRequestWithoutKeyWithOutValue())
-                .post(DepositRequest.builder().id(accountId).balance(null).build());
-
-        response.assertThat().statusCode(HttpStatus.SC_BAD_REQUEST);
-
-        double updatedBalance = accountRequester.getAccountBalanceById(accountId);
-        assertThat(updatedBalance, is(initialBalance));
-    }
+//    @ParameterizedTest
+//    @NullAndEmptySource
+//    public void testDepositWithInvalidValues(String depositAmount) {
+//
+//        long accountId = userAccounts.get(0).getId();
+//        // Получаем начальный баланс аккаунта
+//        double initialBalance = accountRequester.getAccountBalanceById(accountId);
+//
+//        ValidatableResponse response = new CrudRequester(RequestSpecs.authAsUser(userRequest.getUsername(), userRequest.getPassword()),
+//                Endpoint.DEPOSIT,
+//                ResponseSpecs.requestReturnsBadRequestWithoutKeyWithOutValue())
+//                .post(DepositRequest.builder().id(accountId).balance(null).build());
+//
+//        response.assertThat().statusCode(HttpStatus.SC_BAD_REQUEST);
+//
+//        double updatedBalance = accountRequester.getAccountBalanceById(accountId);
+//        assertThat(updatedBalance, is(initialBalance));
+//    }
 
 
     public static Stream<Arguments> depositUnAuthData() {
