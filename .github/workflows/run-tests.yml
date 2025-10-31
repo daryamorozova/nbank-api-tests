@@ -11,6 +11,9 @@ jobs: # аналог этапов
       - name: Checkout repository # копируем файлы репозитория внутрь CI агента
         uses: actions/checkout@v4
 
+      - name: Give execute permission to mvnw
+        run: chmod +x ./mvnw
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
