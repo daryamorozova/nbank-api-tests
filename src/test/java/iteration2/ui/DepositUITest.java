@@ -13,7 +13,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class DepositTest extends BaseUiTest {
+public class DepositUITest extends BaseUiTest {
 
     @Test
     @UserSession

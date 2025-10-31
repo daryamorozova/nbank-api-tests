@@ -12,7 +12,7 @@ import ui.pages.TransferPage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.offset;
 
-public class TransferTest extends BaseUiTest {
+public class TransferUITest extends BaseUiTest {
 
     @Test
     @UserSession(2)
