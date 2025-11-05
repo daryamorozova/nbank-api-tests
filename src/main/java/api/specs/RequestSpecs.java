@@ -1,7 +1,9 @@
 package api.specs;
 
 import api.configs.Config;
+import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.filter.log.ErrorLoggingFilter;
 import io.restassured.filter.log.RequestLoggingFilter;
 import io.restassured.filter.log.ResponseLoggingFilter;
 import io.restassured.http.ContentType;
@@ -15,6 +17,14 @@ import java.util.List;
 import java.util.Map;
 
 public class RequestSpecs {
+    static {
+        // Логгеры: запросы/ответы при фейле
+        RestAssured.filters(new RequestLoggingFilter(), new ResponseLoggingFilter(), new ErrorLoggingFilter());
+
+        // Если у тебя baseURI/basePath инициализируются от конфигурации — выведи их
+        System.out.printf("[API] baseURI=%s, basePath=%s%n", RestAssured.baseURI, RestAssured.basePath);
+    }
+
     private static Map<String, String> authHeaders = new HashMap<>(Map.of("admin", "Basic YWRtaW46YWRtaW4="));
 
     private RequestSpecs() {}
@@ -39,6 +49,8 @@ public class RequestSpecs {
     }
 
     public static RequestSpecification authAsUser(String username, String password) {
+        System.out.printf("[API] using user=%s baseURI=%s basePath=%s%n",
+                username, RestAssured.baseURI, RestAssured.basePath);
         return defaultRequestSpecBuilder()
                 .addHeader("Authorization", getUserAuthHeader(username, password))
                 .build();

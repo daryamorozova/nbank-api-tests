@@ -26,9 +26,16 @@ public class BaseUiTest extends BaseTest {
         Configuration.browser = api.configs.Config.getProperty("browser");
         Configuration.browserSize = api.configs.Config.getProperty("browserSize");
 
+        // Полезные артефакты в CI
+        Configuration.reportsFolder = "build/reports/tests-ui";
+        Configuration.savePageSource = true;
+        Configuration.screenshots = true;
+
         Configuration.browserCapabilities.setCapability("selenoid:options",
-                Map.of("enableVNC", true, "enableLog", true)
-        );
+                Map.of("enableVNC", true, "enableLog", true));
+
+        System.out.printf("[UI] remote=%s, baseUrl=%s, browser=%s, size=%s%n",
+                Configuration.remote, Configuration.baseUrl, Configuration.browser, Configuration.browserSize);
     }
 
     public void authAsUser(String username, String password) {
