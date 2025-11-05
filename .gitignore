@@ -36,3 +36,11 @@ build/
 
 ### Mac OS ###
 .DS_Store
+# test artifacts
+test-output/
+# Maven
+target/
+# IntelliJ
+.idea/
+*.iml
+out/
