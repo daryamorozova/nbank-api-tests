@@ -6,6 +6,7 @@ import api.requests.skelethon.Endpoint;
 import api.requests.skelethon.requesters.ValidatedCrudRequester;
 import api.specs.RequestSpecs;
 import api.specs.ResponseSpecs;
+import common.helpers.StepLogger;
 
 import java.util.List;
 
@@ -19,25 +20,31 @@ public class UserSteps {
     }
 
     public List<CreateAccountResponse> getAllAccounts() {
-        return new ValidatedCrudRequester<CreateAccountResponse>(
-                RequestSpecs.authAsUser(username, password),
-                Endpoint.GET_ACCOUNTS,
-                ResponseSpecs.requestReturnsOK()).getAll(CreateAccountResponse[].class);
+        return StepLogger.log("User " + username + " get all accounts", () -> {
+            return new ValidatedCrudRequester<CreateAccountResponse>(
+                    RequestSpecs.authAsUser(username, password),
+                    Endpoint.GET_ACCOUNTS,
+                    ResponseSpecs.requestReturnsOK()).getAll(CreateAccountResponse[].class);
+        });
     }
 
     public GetProfileResponse getProfile() {
-        return new ValidatedCrudRequester<GetProfileResponse>(
-                RequestSpecs.authAsUser(username, password),
-                Endpoint.GET_PROFILE,
-                ResponseSpecs.requestReturnsOK()
-        ).getOne(GetProfileResponse.class); // 👈 одиночный объект, не массив
+        return StepLogger.log("User Profile" + username + " get profile", () -> {
+            return new ValidatedCrudRequester<GetProfileResponse>(
+                    RequestSpecs.authAsUser(username, password),
+                    Endpoint.GET_PROFILE,
+                    ResponseSpecs.requestReturnsOK()
+            ).getOne(GetProfileResponse.class);
+        });
     }
 
     public CreateAccountResponse createAccount() {
-        return new ValidatedCrudRequester<CreateAccountResponse>(
-                RequestSpecs.authAsUser(username, password),
-                Endpoint.ACCOUNTS,                    // должен быть POST
-                ResponseSpecs.entityWasCreated()
-        ).post(null);
+        return StepLogger.log("User " + username + " create account", () -> {
+            return new ValidatedCrudRequester<CreateAccountResponse>(
+                    RequestSpecs.authAsUser(username, password),
+                    Endpoint.ACCOUNTS,                    // должен быть POST
+                    ResponseSpecs.entityWasCreated()
+            ).post(null);
+        });
     }
 }

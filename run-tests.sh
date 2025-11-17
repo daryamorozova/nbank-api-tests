@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#Как запустить докер контейнер на основании докер образа?
+# Как запустить докер контейнер на основании докер образа?
 #
-#1) собрать докер образ (как компиляция для класса)
-#2) запустить докер контейнер для образа
+# 1) собрать докер образ (как компиляция для класса)
+# 2) запустить докер контейнер для образа
 
 # Настройка
 IMAGE_NAME=nbank-tests
@@ -19,16 +19,23 @@ mkdir -p "$TEST_OUTPUT_DIR/logs"
 mkdir -p "$TEST_OUTPUT_DIR/results"
 mkdir -p "$TEST_OUTPUT_DIR/report"
 
-# Запуск Docker контейнера
+# Запуск Docker контейнера с правильными параметрами
 echo ">>> Тесты запущены"
 docker run --rm \
+  --network nbank-network \
   -v "$TEST_OUTPUT_DIR/logs":/app/logs \
   -v "$TEST_OUTPUT_DIR/results":/app/target/surefire-reports \
   -v "$TEST_OUTPUT_DIR/report":/app/target/site \
   -e TEST_PROFILE="$TEST_PROFILE" \
-  -e APIBASEURL=http://localhost:4111 \
-  -e UIBASEURL=http://localhost:4111 \
-$IMAGE_NAME
+  -e APIBASEURL=http://backend:4111 \
+  -e UIBASEURL=http://frontend \
+  -e JAVA_TOOL_OPTIONS="\
+    -Dselenide.remote=http://selenoid:4444/wd/hub \
+    -Dselenide.baseUrl=http://frontend \
+    -Dselenide.browser=chrome \
+    -Dselenide.browserVersion=128.0 \
+  " \
+  $IMAGE_NAME
 
 # Вывод итогов
 echo ">>> Тесты завершены"
